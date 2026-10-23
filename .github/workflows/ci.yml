@@ -239,17 +239,30 @@ jobs:
             $machine = [BitConverter]::ToUInt16($b, $pe+4)
             $magic = [BitConverter]::ToUInt16($b, $pe+24)
             $pe32plus = ($magic -eq 0x20B)
-            $osv = '{0}.{1}' -f $b[$pe+64], $b[$pe+65]
-            $sv = '{0}.{1}' -f $b[$pe+72], $b[$pe+73]
+            $osMaj = $b[$pe+64]; $osMin = $b[$pe+65]
+            $svMaj = $b[$pe+72]; $svMin = $b[$pe+73]
             $subsysOff = if ($pe32plus) { $pe+92 } else { $pe+88 }
             $subsys = [BitConverter]::ToUInt16($b, $subsysOff)
-            $line = '{0}: machine=0x{1:x4} PE32+={2} minOS={3} subsystemVersion={4} subsystem={5}' -f (Split-Path $Path -Leaf), $machine, $pe32plus, $osv, $sv, $subsys
+            $line = '{0}: machine=0x{1:x4} PE32+={2} minOS={3}.{4} subsystemVersion={5}.{6} subsystem={7}' -f (Split-Path $Path -Leaf), $machine, $pe32plus, $osMaj, $osMin, $svMaj, $svMin, $subsys
             Write-Host $line
             Add-Content -Path "nsis-diag.log" -Value $line -ErrorAction SilentlyContinue
+            $win7ok = ($osMaj -lt 6) -or (($osMaj -eq 6) -and ($osMin -le 1))
+            return @($line, $win7ok)
           }
-          Get-PeInfo "build\us3d.exe"
-          Get-PeInfo "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe"
-          Write-Host "PE-VERIFY: minOS/subsystemVersion <= 6.1 means the Windows 7 loader will accept the image (Win10=10.0, Win8=6.2)"
+          $all = @()
+          foreach ($p in @("build\us3d.exe", "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe")) {
+            $all += Get-PeInfo $p
+          }
+          # Hard gate: a PE that declares a minimum OS newer than 6.1
+          # would be refused by the Windows 7 loader.
+          $bad = @()
+          if (-not $all[1]) { $bad += "us3d.exe" }
+          if (-not $all[3]) { $bad += "installer" }
+          if ($bad.Count -gt 0) {
+            Write-Host ("::error title=PE-Win7-incompatible::minOS > 6.1 in: {0} - the Win7 loader will refuse the image" -f ($bad -join ', '))
+            exit 1
+          }
+          Write-Host ("::warning title=PE-verify-win7-ok::{0}" -f (($all | Where-Object { $_ -is [string] }) -join ' | '))
       - name: Upload NSIS diagnostics
         if: always()
         uses: actions/upload-artifact@v4
