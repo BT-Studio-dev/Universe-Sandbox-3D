@@ -124,9 +124,9 @@ jobs:
               Log "NSIS not preinstalled; trying install options"
               # 1) choco (proven present on the current windows image)
               if (Get-Command choco -ErrorAction SilentlyContinue) {
-                $chocoOut = & choco install nsis -y --no-progress 2>&1
+                $chocoOut = & choco install nsis -y --no-progress --force 2>&1
                 $chocoOut | ForEach-Object { Log $_ }
-                Diag "choco_exit=$LASTEXITCODE"
+                Diag "choco_exit=$LASTEXITCODE out=$(($chocoOut | Where-Object { $_ -match '^\s*\[|installed|error|warn' } | Select-Object -Last 4) -join ' / ')"
                 if ($LASTEXITCODE -eq 0) {
                   $c2 = Get-Command makensis -ErrorAction SilentlyContinue
                   if ($c2) { $makensis = $c2.Source }
@@ -164,6 +164,23 @@ jobs:
                 if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) { Diag "curl=missing"; }
                 else {
                   $urls = @()
+                  # 3a) the choco nupkg itself (choco CDN; a zip with tools\makensis.exe)
+                  try {
+                    curl.exe -fsSL --retry 2 -o nsis_feed.xml "https://community.chocolatey.org/api/v2/FindPackagesById()?id='nsis'"
+                    $m = [regex]::Match((Get-Content nsis_feed.xml -Raw), 'd:downloadUri="([^"]+\.nupkg)"')
+                    if ($m.Success) {
+                      Log "nupkg: $($m.Groups[1].Value)"
+                      curl.exe -fsSL --retry 2 -o nsis.nupkg $m.Groups[1].Value
+                      if ($LASTEXITCODE -eq 0) {
+                        Expand-Archive -Path nsis.nupkg -DestinationPath nupkg -Force
+                        $f = Get-ChildItem -Path nupkg -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+                        if ($f) { $makensis = $f.FullName }
+                        Diag "nupkg=ok makensis=$([bool]$f)"
+                      } else { Diag "nupkg=curl$LASTEXITCODE" }
+                    } else { Diag "nupkg=no-url" }
+                  } catch { Diag "nupkg=error" }
+                  # 3b) nuspec packageSourceUrl
+                  if (-not $makensis) {
                   try {
                     curl.exe -fsSL --retry 2 -o nsis.nuspec "https://community.chocolatey.org/api/v2/package/nsis"
                     [xml]$nuspec = Get-Content nsis.nuspec -Raw
@@ -171,6 +188,7 @@ jobs:
                     if ($src -and $ver) { $urls += ($src -replace '\{0\}', $ver); Diag "nuspec=$ver" }
                     else { Diag "nuspec=no-url" }
                   } catch { Diag "nuspec=error" }
+                  }
                   try {
                     curl.exe -fsSL --retry 2 -o nsis_files.html "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/"
                     $links = [regex]::Matches((Get-Content nsis_files.html -Raw), '/projects/nsis/files/NSIS%20Zip/([\d.]+)/([^"/]+\.zip)/download')
