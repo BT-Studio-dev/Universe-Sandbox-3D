@@ -77,9 +77,9 @@ bool App::init(HINSTANCE hInstance) {
 
     // ---- GL objects ----
     if (!renderer_.init()) {
-        const char* msg = (std::string("Renderer initialization failed:\n") +
-                           renderer_.error()).c_str();
-        MessageBoxA(nullptr, msg, "Universe Sandbox 3D", MB_OK | MB_ICONERROR);
+        const std::string msg =
+            "Renderer initialization failed:\n" + renderer_.error();
+        MessageBoxA(nullptr, msg.c_str(), "Universe Sandbox 3D", MB_OK | MB_ICONERROR);
         return false;
     }
     if (!hud_.init(renderer_.fontTexture())) {

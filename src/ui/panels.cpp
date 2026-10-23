@@ -1092,7 +1092,6 @@ bool UIPanels::pointInPanel(const UIState& s, int w, int h, int px, int py) {
 }
 
 void UIPanels::drawAll(Gui& gui, App& app) {
-    const int w = gui.width(), h = gui.height();
     UIState& u = app.ui_;
 
     // side panels first (they sit under the bottom chrome)

@@ -108,44 +108,66 @@ jobs:
           Get-Item build\us3d.exe | Format-List Name,Length
 
   # ------------------------------------------------------------------
-  # Real Windows build with MinGW-w64 cross compiler.
+  # Real Windows build with a MinGW-w64 cross compiler.
   # NOTE: the "MinGW Makefiles" CMake generator only exists on Windows
   # hosts, so on Linux we cross-compile with the plain Makefiles
   # generator + CMAKE_SYSTEM_NAME=Windows.
+  # Compiler preference:
+  #   1. x86_64-w64-mingw32-g++ when preinstalled,
+  #   2. otherwise zig (pypi 'ziglang') targeting x86_64-windows-gnu,
+  #      which bundles the mingw-w64 CRT and needs no system packages
+  #      (apt on shared runners is unreliable and sometimes hangs).
   # ------------------------------------------------------------------
-  windows-mingw:
+  windows-cross:
     name: Build x64 (MinGW-w64 cross)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Show CMake version
         run: cmake --version
-      - name: Ensure MinGW-w64
+      - name: Ensure Windows cross compiler
+        id: toolchain
         run: |
-          # g++-mingw-w64-x86-64 ships with the ubuntu-latest runner image;
-          # only fall back to apt when it is missing.
-          if ! command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y g++-mingw-w64-x86-64
+          if command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then
+            echo "Using preinstalled MinGW-w64"
+            x86_64-w64-mingw32-g++ --version | head -1
+            echo "kind=mingw" >> "$GITHUB_OUTPUT"
+          else
+            echo "MinGW-w64 not preinstalled; using zig (pypi) cross compiler"
+            python3 -m pip install --quiet ziglang
+            zig version
+            printf '#!/bin/sh\nexec zig cc "$@"\n' > zigcc
+            printf '#!/bin/sh\nexec zig c++ "$@"\n' > zigcxx
+            chmod +x zigcc zigcxx
+            echo "kind=zig" >> "$GITHUB_OUTPUT"
           fi
-          x86_64-w64-mingw32-g++ --version | head -1
       - name: Configure
         run: |
-          cmake -B build \
-            -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
-            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+          if [ "${{ steps.toolchain.outputs.kind }}" = "zig" ]; then
+            cmake -B build \
+              -DCMAKE_SYSTEM_NAME=Windows \
+              -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+              -DCMAKE_C_COMPILER=$PWD/zigcc \
+              -DCMAKE_CXX_COMPILER=$PWD/zigcxx \
+              -DCMAKE_C_FLAGS="-target x86_64-windows-gnu" \
+              -DCMAKE_CXX_FLAGS="-target x86_64-windows-gnu"
+          else
+            cmake -B build \
+              -DCMAKE_SYSTEM_NAME=Windows \
+              -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+              -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+              -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+          fi
       - name: Build
         run: |
           cmake --build build --parallel 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             grep -nE "error:|Error [0-9]|undefined reference|collect2|ld returned|FAILED" build.log | head -25 | while IFS= read -r line; do
-              printf '::error title=MinGW-build-failure::%s\n' "$line"
+              printf '::error title=Cross-build-failure::%s\n' "$line"
             done
             tail -n 10 build.log | while IFS= read -r line; do
-              printf '::error title=MinGW-build-tail::%s\n' "$line"
+              printf '::error title=Cross-build-tail::%s\n' "$line"
             done
             exit "$status"
           fi
