@@ -303,7 +303,8 @@ bool Renderer::buildFontTexture() {
 //  Frame
 // ---------------------------------------------------------------------------
 void Renderer::render(const Camera& cam, const System& sim, int selectedId,
-                      bool showTrails, float timeSec, int w, int h) {
+                      bool showTrails, float timeSec, int w, int h,
+                      const ViewOptions& vo) {
     gl33::glViewport(0, 0, w, h);
     gl33::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -343,7 +344,7 @@ void Renderer::render(const Camera& cam, const System& sim, int selectedId,
     gl33::glDrawArrays(GL_POINTS, 0, (GLsizei)starCount_);
 
     // ---- bodies ----
-    drawBodies(cam, sim, selectedId, timeSec, lightPos, lightColor);
+    drawBodies(cam, sim, selectedId, timeSec, lightPos, lightColor, vo);
 
     // ---- sun glow (additive) ----
     drawGlow(sim, timeSec);
@@ -361,7 +362,7 @@ void Renderer::render(const Camera& cam, const System& sim, int selectedId,
 
 void Renderer::drawBodies(const Camera& cam, const System& sim, int selectedId,
                           float timeSec, const Vec3& lightPos,
-                          const Vec3& lightColor) {
+                          const Vec3& lightColor, const ViewOptions& vo) {
     bodyProg_.use();
     gl33::glUniformMatrix4fv(bodyProg_.uniform("uView"), 1, 0, &view_.m[0][0]);
     gl33::glUniformMatrix4fv(bodyProg_.uniform("uProj"), 1, 0, &proj_.m[0][0]);
@@ -372,21 +373,47 @@ void Renderer::drawBodies(const Camera& cam, const System& sim, int selectedId,
                       lightColor.x, lightColor.y, lightColor.z);
     gl33::glUniform1f(bodyProg_.uniform("uTime"), timeSec);
     gl33::glUniform1f(bodyProg_.uniform("uPulse"), 0.5f + 0.5f * std::sin(timeSec * 4.0f));
+    gl33::glUniform1f(bodyProg_.uniform("uClouds"), vo.clouds);
+    gl33::glUniform1f(bodyProg_.uniform("uAtmos"), vo.atmos);
+    gl33::glUniform3f(bodyProg_.uniform("uLampPos"),
+                      vo.lampPos.x, vo.lampPos.y, vo.lampPos.z);
+    gl33::glUniform3f(bodyProg_.uniform("uLampColor"),
+                      vo.lampColor.x * vo.lampStrength,
+                      vo.lampColor.y * vo.lampStrength,
+                      vo.lampColor.z * vo.lampStrength);
+    gl33::glUniform1f(bodyProg_.uniform("uLampOn"), vo.lampOn ? 1.0f : 0.0f);
 
     gl33::glBindVertexArray(sphereVao_);
     gl33::glDepthMask(GL_TRUE);
     for (const Body& b : sim.bodies()) {
         if (b.dead) continue;
-        const Mat4 model = Mat4::Multiply(Mat4::Translate(b.pos), Mat4::Scale(b.radius));
+        if (!vo.showDebris && b.type == BodyType::Asteroid) continue;
+
+        // Model: translate * spin (visual rotation) * scale.
+        Mat4 model = Mat4::Translate(b.pos);
+        if (b.spin != 0.0f) {
+            const float ang = b.spin * sim.time() + (float)(b.uid % 997) * 0.0063f;
+            const float c = std::cos(ang), s = std::sin(ang);
+            Mat4 rot;
+            rot.m[0][0] = c;   rot.m[0][2] = s;
+            rot.m[2][0] = -s;  rot.m[2][2] = c;
+            model = Mat4::Multiply(model, rot);
+        }
+        model = Mat4::Multiply(model, Mat4::Scale(b.radius));
         gl33::glUniformMatrix4fv(bodyProg_.uniform("uModel"), 1, 0, &model.m[0][0]);
         gl33::glUniform3f(bodyProg_.uniform("uCenter"), b.pos.x, b.pos.y, b.pos.z);
-        gl33::glUniform3f(bodyProg_.uniform("uAlbedo"), b.color.x, b.color.y, b.color.z);
+        gl33::glUniform3f(bodyProg_.uniform("uAlbedo"),
+                          b.displayColor.x, b.displayColor.y, b.displayColor.z);
         gl33::glUniform1f(bodyProg_.uniform("uEmissive"), b.isStar() ? 1.0f : 0.0f);
         gl33::glUniform1f(bodyProg_.uniform("uBandFreq"), b.bandFreq);
         gl33::glUniform1f(bodyProg_.uniform("uRoughness"), b.roughness);
         gl33::glUniform1f(bodyProg_.uniform("uSelected"),
                           b.id == selectedId ? 1.0f : 0.0f);
         gl33::glUniform1f(bodyProg_.uniform("uFade"), std::min(1.0f, b.age * 2.0f));
+        gl33::glUniform1f(bodyProg_.uniform("uSurface"), (float)b.surface);
+        gl33::glUniform1f(bodyProg_.uniform("uTempGlow"),
+                          clampf((b.temperatureC - 300.0f) / 2700.0f, 0.0f, 1.0f)
+                          * vo.heatGlow);
         gl33::glDrawElements(GL_TRIANGLES, (GLsizei)sphereIndexCount_,
                              GL_UNSIGNED_INT, (const void*)0);
     }

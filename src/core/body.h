@@ -35,14 +35,23 @@ struct Body {
     Vec3 acc   = Vec3::Zero();   // AU / year^2
     float mass  = 0.0f;          // solar masses
     float radius = 0.0f;         // display radius, AU (also collision radius)
+    float realRadiusAU = 0.0f;   // "real" radius used for info-panel physics
 
     Vec3 color = Vec3(0.8f, 0.8f, 0.8f);  // albedo / surface tint
+    Vec3 displayColor;                    // effective albedo (colour-by overrides)
     float bandFreq = 0.0f;                // >0 gives banded gas-giant look
     float roughness = 0.5f;               // surface noise amount
+
+    // Surface & thermals (UI: Tools / Info panels)
+    int   surface   = 0;    // 0 rock, 1 water, 2 ice, 3 air/clouds
+    float temperatureC = 15.0f;  // surface temperature
+    float spin       = 0.0f;     // rad / year (visual rotation)
 
     bool dead = false;  // marked for removal (merged or deleted)
 
     float age = 0.0f;   // seconds since spawn (drives fade-in, HUD pulse)
+
+    Body() { displayColor = color; }
 
     bool isStar() const { return type == BodyType::Star; }
 };

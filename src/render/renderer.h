@@ -13,6 +13,18 @@
 
 namespace us3d {
 
+// View-panel options applied to a frame.
+struct ViewOptions {
+    float clouds = 0.0f;        // 0/1 global clouds layer
+    float atmos = 1.0f;         // 0/1 atmosphere rim glow
+    float heatGlow = 1.0f;      // 0/1 show Heat-Beam glow
+    bool  lampOn = false;
+    Vec3  lampPos = Vec3::Zero();
+    Vec3  lampColor = Vec3(1.0f, 1.0f, 1.0f);
+    float lampStrength = 1.0f;
+    bool  showDebris = true;    // render small bodies (asteroids)
+};
+
 // Small helper: compile + link a 2-stage program.
 class Program {
 public:
@@ -39,7 +51,11 @@ public:
 
     // Draws a full frame.
     void render(const Camera& cam, const System& sim, int selectedId,
-                bool showTrails, float timeSec, int w, int h);
+                bool showTrails, float timeSec, int w, int h,
+                const ViewOptions& vo = ViewOptions());
+
+    // View panel: field of view in degrees.
+    void setFovDeg(float deg) { fov_ = deg2rad(clampf(deg, 25.0f, 100.0f)); }
 
     // Font atlas texture (RGBA8, luminance in .r) for the HUD.
     GLuint fontTexture() const { return fontTex_; }
@@ -54,7 +70,8 @@ private:
     void buildGlowMesh();
     bool buildFontTexture();
     void drawBodies(const Camera& cam, const System& sim, int selectedId,
-                    float timeSec, const Vec3& lightPos, const Vec3& lightColor);
+                    float timeSec, const Vec3& lightPos, const Vec3& lightColor,
+                    const ViewOptions& vo);
     void drawTrails(const System& sim);
     void drawGlow(const System& sim, float timeSec);
     void drawSelectionRing(const Camera& cam, const System& sim, int selectedId);

@@ -1,8 +1,8 @@
 // ============================================================================
 //  Universe Sandbox 3D - application controller
 //
-//  Owns the window, simulation, camera, renderer and HUD; turns input into
-//  simulation actions and drives the main loop.
+//  Owns the window, simulation, camera, renderer, HUD and GUI; turns input
+//  into simulation actions and drives the main loop.
 // ============================================================================
 #pragma once
 
@@ -12,6 +12,8 @@
 #include "render/camera.h"
 #include "render/hud.h"
 #include "render/renderer.h"
+#include "ui/gui.h"
+#include "ui/panels.h"
 #include "win32/window.h"
 
 #include <string>
@@ -29,10 +31,13 @@ public:
     void requestQuit() { running_ = false; }
 
 private:
+    friend class UIPanels;
+
     // ---- input callbacks (bound to Window) ----
     void onResize(int w, int h);
     void onClose();
     void onKey(int vk, bool down);
+    void onChar(char c);
     void onMouseDown(int button);
     void onMouseUp(int button);
     void onMouseMove(int x, int y, int dx, int dy);
@@ -44,6 +49,7 @@ private:
     void update(float dt);
     void renderFrame();
     void drawHud();
+    void applyColourBy();
     void pushFlash(const std::string& msg);
 
     // ---- actions ----
@@ -54,7 +60,17 @@ private:
     void loadPreset(int which);
     void doSave();
     void doLoad();
-    void resetCameraForPreset();
+
+    // ---- UI actions (called from UIPanels) ----
+    void uiSpawnCatalog(int index, bool isScenario);
+    void uiTool(int id);
+    void uiToolRight(int id);
+    void uiSelectUid(int uid);
+    void uiCloseTopPanel();
+    void detonateBody(int fid);
+    void camGoTo();
+    void camSeeAll();
+    void camResetView();
 
     // ---- state ----
     Window window_;
@@ -62,10 +78,14 @@ private:
     Camera cam_;
     Renderer renderer_;
     Hud hud_;
+    Gui gui_;
 
     HINSTANCE hInstance_ = nullptr;
     bool running_ = true;
     bool inited_ = false;
+
+    // UI state (panels, toggles, sliders) + persistent text.
+    UIState ui_;
 
     // Tracked by stable uid (survives renumbering after merges/deletes).
     int selectedUid_ = -1;
@@ -78,8 +98,9 @@ private:
 
     bool paused_     = false;
     float timeSpeed_ = 1.0f;      // 0.1 .. 32
-    bool showTrails_ = true;
     bool showHelp_   = true;
+
+    std::string simName_ = "Solar System";
 
     float timeSec_ = 0.0f;        // wall clock (shader animation)
     float fps_     = 60.0f;
@@ -92,6 +113,7 @@ private:
     int  mouseButton_  = -1;
     float downX_ = 0.0f, downY_ = 0.0f;
     bool dragged_ = false;
+    bool uiPress_[3] = { false, false, false };  // press started inside GUI
     int  lastClickTimeMs_ = -10000;
     bool keys_[256] = { false };
 };

@@ -60,6 +60,8 @@
     <ClCompile Include="..\src\render\renderer.cpp" />
     <ClCompile Include="..\src\render\camera.cpp" />
     <ClCompile Include="..\src\render\hud.cpp" />
+    <ClCompile Include="..\src\ui\gui.cpp" />
+    <ClCompile Include="..\src\ui\panels.cpp" />
     <ClCompile Include="..\src\core\system.cpp" />
     <ClCompile Include="..\src\core\presets.cpp" />
     <ClCompile Include="..\src\core\savestate.cpp" />

@@ -51,6 +51,14 @@ uniform float uTime;
 uniform float uSelected;
 uniform float uPulse;
 uniform float uFade;        // spawn/fade-in
+// View panel (worlds / colour by / lamp)
+uniform float uSurface;     // 0 rock, 1 water, 2 ice, 3 air/clouds
+uniform float uTempGlow;    // 0..1 heat glow (Heat Beam tool)
+uniform float uClouds;      // global clouds toggle
+uniform float uAtmos;       // rim/atmosphere glow 0..1
+uniform vec3  uLampPos;     // lamp point light (world)
+uniform vec3  uLampColor;
+uniform float uLampOn;
 
 out vec4 fragColor;
 
@@ -101,11 +109,24 @@ void main() {
     float mottle = fbm(S * (3.5 + uRoughness * 5.0));
     vec3 base = uAlbedo * (0.80 + 0.40 * mottle);
 
+    // Terraform surface tints (View: surface state)
+    if (uSurface > 0.5 && uSurface < 1.5) {          // water
+        base = mix(base, vec3(0.06, 0.22, 0.45), 0.55);
+    } else if (uSurface > 1.5 && uSurface < 2.5) {   // ice
+        base = mix(base, vec3(0.85, 0.92, 1.00), 0.65);
+    }
+
     if (uBandFreq > 0.5) {
         float lat = asin(clamp(S.y, -1.0, 1.0));
         float bands = sin(lat * uBandFreq * 3.0 + fbm(S * 5.0) * 3.5);
         vec3 banded = base * (0.82 + 0.30 * bands) * vec3(1.06, 0.98, 0.92);
         base = banded;
+    }
+
+    // Clouds (global toggle or air surface)
+    if (uClouds > 0.5 || (uSurface > 2.5)) {
+        float cl = smoothstep(0.42, 0.72, fbm(S * 6.5 + vec3(0.0, uTime * 0.05, 0.0)));
+        base = mix(base, vec3(0.92, 0.94, 0.98) * (0.75 + 0.25 * mottle), cl * 0.85);
     }
 
     float diff = max(dot(N, L), 0.0);
@@ -115,7 +136,21 @@ void main() {
 
     vec3 col = base * (0.055 + uLightColor * diff)
              + uLightColor * spec
-             + uAlbedo * rim * 0.14;
+             + uAlbedo * rim * 0.14 * uAtmos;
+
+    // Lamp (View panel point light)
+    if (uLampOn > 0.5) {
+        vec3  L2   = normalize(uLampPos - vWorldPos);
+        float d2   = clamp(dot(N, L2), 0.0, 1.0);
+        float att  = 1.0 / (1.0 + 0.15 * dot(uLampPos - vWorldPos, uLampPos - vWorldPos));
+        col += uLampColor * d2 * att;
+    }
+
+    // Heat Beam glow
+    if (uTempGlow > 0.004) {
+        vec3 hot = mix(vec3(1.0, 0.25, 0.02), vec3(1.0, 0.95, 0.75), uTempGlow * 0.7);
+        col += hot * uTempGlow * (0.25 + 0.75 * (1.0 - diff));
+    }
 
     if (uSelected > 0.5) col += vec3(1.0, 0.85, 0.35) * 0.12 * uPulse;
     fragColor = vec4(col * uFade, 1.0);
@@ -326,6 +361,75 @@ void main() {
     float flick = 1.0 + 0.035 * sin(uTime * 6.3) + 0.025 * sin(uTime * 11.9 + 1.7);
     float a = clamp(core + halo, 0.0, 1.0);
     fragColor = vec4(uColor * a * uIntensity * flick, a);
+}
+)glsl";
+
+// ---------------------------------------------------------------------------
+//  GUI disc icons (Add-panel thumbnails, body avatars)
+//  Screen-space quad; per-vertex colour + per-icon style params.
+// ---------------------------------------------------------------------------
+static const char* icon_vs = R"glsl(
+#version 330 core
+layout(location = 0) in vec2 aPos;      // NDC corners of the icon quad
+layout(location = 1) in vec2 aUv;       // 0..1 over the quad
+layout(location = 2) in vec4 aColor;    // albedo (star: core colour)
+layout(location = 3) in vec2 aParams;   // x = bandFreq, y = emissive
+out vec2 vUv;
+out vec4 vColor;
+out vec2 vParams;
+void main() {
+    vUv = aUv;
+    vColor = aColor;
+    vParams = aParams;
+    gl_Position = vec4(aPos, 0.0, 1.0);
+}
+)glsl";
+
+static const char* icon_fs = R"glsl(
+#version 330 core
+precision mediump float;
+in vec2 vUv;
+in vec4 vColor;
+in vec2 vParams;
+out vec4 fragColor;
+
+float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+void main() {
+    vec2 c = (vUv - 0.5) * 2.0;          // -1..1, circle space
+    float d = length(c);
+    if (d > 1.0) discard;
+
+    vec3 S = vec3(c, sqrt(max(1.0 - d * d, 0.0)));
+
+    if (vParams.y > 0.5) {
+        // ---- star: hot radial core with mottled surface ----
+        float m = hash12(S.xy * 7.0 + S.zz * 3.0) * 0.5 + hash12(S.xy * 15.0) * 0.5;
+        float t = clamp(d * 1.35 - m * 0.35, 0.0, 1.0);
+        vec3 col = mix(vColor.rgb * 1.5, vec3(1.0, 0.42, 0.06), t);
+        col += vec3(1.0, 0.8, 0.4) * exp(-d * 5.0) * 0.9;
+        fragColor = vec4(col, 1.0);
+        return;
+    }
+
+    // ---- planet: lit sphere with bands + mottle ----
+    vec3 N = normalize(S);
+    vec3 L = normalize(vec3(-0.55, 0.35, 0.75));
+    float diff = max(dot(N, L), 0.0);
+    float mottle = hash12(S.xy * 9.0 + S.yz * 4.0);
+    vec3 col = vColor.rgb * (0.28 + 1.05 * diff) * (0.85 + 0.3 * mottle);
+    if (vParams.x > 0.5) {
+        float lat = asin(clamp(N.y, -1.0, 1.0));
+        float bands = sin(lat * vParams.x * 3.0);
+        col *= 0.85 + 0.25 * bands;
+    }
+    float rim = pow(1.0 - N.z, 2.0);
+    col += vColor.rgb * rim * 0.12;
+    fragColor = vec4(col, 1.0);
 }
 )glsl";
 

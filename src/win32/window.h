@@ -54,6 +54,7 @@ public:
     std::function<void(int x, int y, int dx, int dy)> onMouseMove;
     std::function<void(int delta)>            onWheel;
     std::function<void()>                     onFocusLost;
+    std::function<void(char)>                 onChar;    // printable (32..126)
 
     // Process one pending message; returns false when WM_QUIT is seen.
     static bool pumpMessage();

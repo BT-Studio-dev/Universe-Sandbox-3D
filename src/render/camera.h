@@ -47,6 +47,12 @@ public:
     void setDistance(float d) { dist_ = clampf(d, kMinDist, kMaxDist); }
     float distance() const    { return dist_; }
 
+    void setPose(float yaw, float pitch, float dist) {
+        yaw_ = yaw;
+        pitch_ = clampf(pitch, -1.45f, 1.45f);
+        dist_ = clampf(dist, kMinDist, kMaxDist);
+    }
+
     Vec3 position() const {
         const float cy = std::cos(yaw_), sy = std::sin(yaw_);
         const float cp = std::cos(pitch_), sp = std::sin(pitch_);

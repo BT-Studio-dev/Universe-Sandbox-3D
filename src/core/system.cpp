@@ -141,6 +141,7 @@ void System::finalize() {
 }
 
 void System::handleCollisions() {
+    if (!impactsEnabled_) return;
     const int n = (int)bodies_.size();
     for (int i = 0; i < n; ++i) {
         Body& a = bodies_[i];
@@ -195,14 +196,18 @@ void System::clearTrails() {
     for (auto& t : trails_) t.clear();
 }
 
-float System::totalEnergy() const {
+float System::kineticEnergy() const {
     float ke = 0.0f;
-    float pe = 0.0f;
-    const float eps2 = cfg_.softening * cfg_.softening;
     for (const Body& b : bodies_) {
         if (b.dead) continue;
         ke += 0.5f * b.mass * lengthSq(b.vel);
     }
+    return ke;
+}
+
+float System::potentialEnergy() const {
+    float pe = 0.0f;
+    const float eps2 = cfg_.softening * cfg_.softening;
     const int n = (int)bodies_.size();
     for (int i = 0; i < n; ++i) {
         if (bodies_[i].dead) continue;
@@ -212,7 +217,11 @@ float System::totalEnergy() const {
             pe -= cfg_.G * bodies_[i].mass * bodies_[j].mass / r;
         }
     }
-    return ke + pe;
+    return pe;
+}
+
+float System::totalEnergy() const {
+    return kineticEnergy() + potentialEnergy();
 }
 
 void System::clearAll() {

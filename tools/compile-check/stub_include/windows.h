@@ -146,6 +146,7 @@ typedef struct {
 #define WM_MBUTTONUP        0x0208
 #define WM_MOUSEWHEEL       0x020A
 #define WM_KILLFOCUS        0x000A
+#define WM_CHAR             0x0102
 #define WM_GETMINMAXINFO    0x0024
 #define WM_DPICHANGED       0x02E0
 
@@ -153,6 +154,7 @@ typedef struct {
 #define PM_REMOVE           1
 
 // ---- virtual keys (character keys use their ASCII code) ----------------------
+#define VK_BACK     0x08
 #define VK_SPACE    0x20
 #define VK_DELETE   0x2E
 #define VK_ESCAPE   0x1B

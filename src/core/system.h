@@ -79,6 +79,12 @@ public:
 
     // Total energy (kinetic + potential), for diagnostics/tests.
     float totalEnergy() const;
+    float kineticEnergy() const;
+    float potentialEnergy() const;
+
+    // Collision/merge toggle (Sim panel: "Impacts").
+    void  setImpactsEnabled(bool on) { impactsEnabled_ = on; }
+    bool  impactsEnabled() const { return impactsEnabled_; }
 
     // -- trails -------------------------------------------------------------
     // Trails[i] holds up to trailLength recent positions for body id i
@@ -99,6 +105,7 @@ public:
     }
 
     SystemConfig& config() { return cfg_; }
+    const SystemConfig& config() const { return cfg_; }
 
 private:
     void computeAccelerations(std::vector<Vec3>& out);
@@ -111,6 +118,7 @@ private:
     std::vector<std::string> events_;
     float time_ = 0.0f;
     bool  reversed_ = false;
+    bool  impactsEnabled_ = true;
     int   nextId_ = 0;
     int   stepCount_ = 0;
 };

@@ -63,6 +63,8 @@ if(WIN32)
         src/render/renderer.cpp
         src/render/camera.cpp
         src/render/hud.cpp
+        src/ui/gui.cpp
+        src/ui/panels.cpp
         ${US3D_CORE_SOURCES}
     )
     target_include_directories(us3d PRIVATE src)

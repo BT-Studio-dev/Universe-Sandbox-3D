@@ -79,6 +79,11 @@ LRESULT CALLBACK Window::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         if (w->onWheel) w->onWheel(GET_WHEEL_DELTA_WPARAM(wParam));
         return 0;
 
+    case WM_CHAR:
+        if (w->onChar && wParam >= 32 && wParam < 127)
+            w->onChar((char)wParam);
+        return 0;
+
     case WM_KILLFOCUS:
         if (w->onFocusLost) w->onFocusLost();
         return 0;

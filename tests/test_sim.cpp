@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <fstream>
 #include <vector>
 
 using namespace us3d;
@@ -147,6 +148,33 @@ static void testSaveLoad() {
     std::remove(path);
 }
 
+static void testV1Compat() {
+    std::printf("[test] legacy v1 save file still loads\n");
+    const char* path = "us3d_test_v1.txt";
+    {
+        std::ofstream f(path);
+        f << "US3D SAVE 1\n"
+          << "time 1.25\n"
+          << "reversed 0\n"
+          << "body \"Old Sun\" 0 0.5 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.09 1.0 0.9 0.5 0\n"
+          << "body \"Old Planet\" 1 1.0 0.0 0.0 0.0 6.283185 0.0 3e-6 0.02 0.3 0.5 0.9 0\n";
+    }
+    System s;
+    const SaveResult r = loadSystem(s, path);
+    CHECK(r.ok, "v1 file accepted");
+    CHECK(s.bodyCount() == 2, "two bodies loaded");
+    CHECK(std::fabs(s.time() - 1.25f) < 1e-5f, "time loaded");
+    const Body* planet = nullptr;
+    for (const Body& b : s.bodies())
+        if (b.name == "Old Planet") planet = &b;
+    CHECK(planet != nullptr, "spaced name round-trips (quoted token)");
+    if (planet) {
+        CHECK(planet->surface == 0, "missing v2 fields default to rock");
+        CHECK(std::fabs(planet->vel.y - 6.283185f) < 1e-4f, "v1 velocity parsed");
+    }
+    std::remove(path);
+}
+
 static void testAsteroidBelt() {
     std::printf("[test] asteroid belt (400 bodies) stays sane over 2 years\n");
     System s;
@@ -170,6 +198,7 @@ int main() {
     testCollision();
     testReversibility();
     testSaveLoad();
+    testV1Compat();
     testAsteroidBelt();
     std::printf("================================================\n");
     if (g_failures == 0) {
