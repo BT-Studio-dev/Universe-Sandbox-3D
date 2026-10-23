@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Universe Sandbox 3D — N-body universe in your pocket (and on Windows 7)</title>
+<meta name="description" content="Universe Sandbox 3D: a dependency-free C#/OpenGL N-body gravity sandbox for Windows 7, 10 and 11. Spawn stars and planets, reverse time, save your universe.">
+<style>
+  :root{
+    --bg:#05070f; --bg2:#0a0f1e; --panel:#0d1426; --line:#1c2742;
+    --txt:#dbe4f5; --dim:#8b98b8; --acc:#5aa9ff; --acc2:#ffb454; --ok:#42d392;
+    --mono:"Cascadia Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font:16px/1.6 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+  section{padding:56px 0}
+  h2{font-size:1.7rem;margin-bottom:8px;letter-spacing:.3px}
+  .sub{color:var(--dim);margin-bottom:28px}
+  .mono{font-family:var(--mono)}
+
+  header{position:sticky;top:0;z-index:9;background:rgba(5,7,15,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:22px;height:56px}
+  .logo{font-weight:700;font-size:1.05rem;letter-spacing:.4px;white-space:nowrap}
+  .logo b{color:var(--acc)}
+  .nav a{color:var(--dim);font-size:.95rem}
+  .nav a:hover{color:var(--txt);text-decoration:none}
+  .nav .grow{flex:1}
+  .pill{font-family:var(--mono);font-size:.78rem;color:var(--ok);border:1px solid #1d4d38;background:#0a1f17;padding:3px 10px;border-radius:999px;white-space:nowrap}
+
+  /* hero */
+  .hero{position:relative;padding:70px 0 0;overflow:hidden}
+  #space{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .hero-inner{position:relative;z-index:2;padding:8px 0 90px}
+  .hero h1{font-size:clamp(2.2rem,5.4vw,3.6rem);line-height:1.12;font-weight:700;max-width:760px}
+  .hero h1 span{color:var(--acc)}
+  .hero p.lead{margin:18px 0 30px;color:var(--dim);font-size:1.12rem;max-width:640px}
+  .btns{display:flex;gap:14px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600;font-size:1rem;border:1px solid transparent}
+  .btn:hover{text-decoration:none;transform:translateY(-1px)}
+  .btn-pri{background:var(--acc);color:#04101f}
+  .btn-sec{border-color:var(--line);color:var(--txt);background:var(--panel)}
+  .hero .badges{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
+  .badge{font-family:var(--mono);font-size:.78rem;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:rgba(13,20,38,.7)}
+
+  /* cards / tables */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h3{font-size:1.02rem;margin-bottom:8px}
+  .card p{color:var(--dim);font-size:.94rem}
+  .card .ic{font-size:1.5rem;display:block;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:.95rem}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.6px}
+  td.mono{font-family:var(--mono);font-size:.88rem;color:var(--txt)}
+  .tbl-wrap{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+  .tbl-wrap .inner{overflow-x:auto}
+
+  .step{display:flex;gap:14px;margin-bottom:14px}
+  .step .n{flex:0 0 30px;height:30px;border-radius:8px;background:#12203c;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--mono);color:var(--acc);font-weight:700}
+  .step p{color:var(--dim)}
+  .step p b{color:var(--txt)}
+
+  .callout{border:1px solid #2a3c63;background:linear-gradient(180deg,#0d1730,#0a1120);border-radius:12px;padding:18px 20px;color:var(--dim);font-size:.95rem}
+  .callout b{color:var(--txt)}
+  .callout .mono{color:var(--acc2);font-size:.86rem}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--dim);font-size:.9rem}
+  footer .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .foot-note{margin-top:10px;font-size:.82rem;color:#5c6a8c}
+  @media (max-width:640px){ .pill{display:none} section{padding:40px 0} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo">◉ Universe <b>Sandbox 3D</b></div>
+    <a href="#features">Features</a>
+    <a href="#run">Download</a>
+    <a href="#controls">Controls</a>
+    <a href="#tech">Build</a>
+    <div class="grow"></div>
+    <span class="pill">CI ● green</span>
+    <a class="pill" style="color:var(--acc);border-color:var(--line);background:var(--panel)" href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D">GitHub ↗</a>
+  </div>
+</header>
+
+<div class="hero">
+  <canvas id="space"></canvas>
+  <div class="wrap hero-inner">
+    <h1>Bend gravity. Reverse time.<br><span>Build your own universe.</span></h1>
+    <p class="lead">A real-time N-body gravity sandbox rendered in OpenGL — stars, planets,
+      moons and asteroid belts, all procedural, with zero external dependencies.
+      Runs on <b style="color:var(--txt)">Windows 7&nbsp;SP1, 10 and 11</b> (x64).</p>
+    <div class="btns">
+      <a class="btn btn-pri" href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions/runs/39992395519/artifacts">⬇ Download for Windows (Actions artifacts)</a>
+      <a class="btn btn-sec" href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D">View source</a>
+    </div>
+    <div class="badges">
+      <span class="badge">C# · OpenGL 3.3</span>
+      <span class="badge">raw Win32 + WGL</span>
+      <span class="badge">0 dependencies</span>
+      <span class="badge">N-body · leapfrog</span>
+      <span class="badge">Win7 / 10 / 11 x64</span>
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Features</h2>
+    <p class="sub">Everything drawn procedurally in code — no texture files, no asset pipeline.</p>
+    <div class="grid">
+      <div class="card"><span class="ic">🪐</span><h3>Real N-body gravity</h3><p>Newtonian gravity between <i>all</i> bodies (G&nbsp;=&nbsp;4π²), kick-drift-kick leapfrog integration, momentum-conserving collisions and merges.</p></div>
+      <div class="card"><span class="ic">🌟</span><h3>Procedural bodies</h3><p>Animated star surfaces, rocky planets, banded gas giants, moons and 400-body asteroid belts — generated in shaders.</p></div>
+      <div class="card"><span class="ic">⏪</span><h3>Time machine</h3><p>Pause, 0.1×–32× speed, and full <b>time reversal</b> — watch orbits run backwards.</p></div>
+      <div class="card"><span class="ic">🖱️</span><h3>Orbit camera &amp; picking</h3><p>Orbit / pan / zoom, click to select, double-click to focus and follow any body.</p></div>
+      <div class="card"><span class="ic">💾</span><h3>Presets &amp; save/load</h3><p>Solar System, Binary star, Star + Moon, Random Universe — and plain-text saves of your whole cosmos.</p></div>
+      <div class="card"><span class="ic">🖥️</span><h3>Full in-engine UI</h3><p>Bottom bar (Add / Tools / Find / Sim / View), time bar and tabbed panels — an immediate-mode GUI drawn on GL quads.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="run" style="background:var(--bg2)">
+  <div class="wrap">
+    <h2>Get it running</h2>
+    <p class="sub">Three ways in — all from the same green CI run.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>1 · Installer (recommended)</h3>
+        <p>Grab <span class="mono">UniverseSandbox3D-Setup-win64</span> from the
+        <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions/runs/39992395519/artifacts">Actions artifacts</a>.
+        Installs to <span class="mono">C:\Program Files\Universe Sandbox 3D</span> with start-menu + desktop shortcuts and an uninstaller.
+        Fully self-contained (static C runtime).</p>
+      </div>
+      <div class="card">
+        <h3>2 · Portable exe</h3>
+        <p>Download <span class="mono">UniverseSandbox3D-exe-msvc-win64</span> (or the
+        <span class="mono">-exe-cross-win64</span> build), unzip and run <span class="mono">us3d.exe</span>.
+        Saves sit next to the exe.</p>
+      </div>
+      <div class="card">
+        <h3>3 · No GPU driver? (VMs)</h3>
+        <p>Use the bundled <span class="mono">run_mesa.bat</span> with the
+        <a href="https://www.mesa3d.org/download.html">Mesa for Windows</a> DLLs
+        (<span class="mono">opengl32.dll</span> + <span class="mono">libgallium_wgl.dll</span>) next to the exe —
+        software rendering via llvmpipe.</p>
+      </div>
+    </div>
+    <div style="height:18px"></div>
+    <div class="callout">
+      <b>Requirements:</b> Windows 7 SP1 / 10 / 11 <b>64-bit</b> · any GPU with OpenGL 3.3
+      (or Mesa llvmpipe) · 1 GB RAM.
+      <div style="height:8px"></div>
+      <span class="mono">note:</span> the cross-built exe expects the Universal C Runtime on Windows 7
+      (any VC++ 2015–2022 redistributable); the installer build has zero runtime prerequisites.
+    </div>
+  </div>
+</section>
+
+<section id="controls">
+  <div class="wrap">
+    <h2>Controls</h2>
+    <p class="sub">Press <span class="mono">H</span> in the app for the in-game help overlay.</p>
+    <div class="tbl-wrap"><div class="inner">
+      <table>
+        <tr><th>Input</th><th>Action</th><th>Input</th><th>Action</th></tr>
+        <tr><td class="mono">Left drag</td><td>Orbit camera</td><td class="mono">Space</td><td>Pause / resume</td></tr>
+        <tr><td class="mono">Right / mid drag</td><td>Pan camera</td><td class="mono">+ / −</td><td>Time speed (0.1×–32×)</td></tr>
+        <tr><td class="mono">Wheel</td><td>Zoom</td><td class="mono">N</td><td>Reverse / restore time</td></tr>
+        <tr><td class="mono">Left click</td><td>Select body</td><td class="mono">F</td><td>Toggle camera follow</td></tr>
+        <tr><td class="mono">Double click</td><td>Focus + zoom to body</td><td class="mono">G</td><td>Toggle motion trails</td></tr>
+        <tr><td class="mono">1 / 2 / 3</td><td>Spawn planet / star / asteroid</td><td class="mono">R</td><td>New random universe</td></tr>
+        <tr><td class="mono">Del</td><td>Delete selected body</td><td class="mono">9 8 0 7</td><td>Presets: solar / binary / belt / moon</td></tr>
+        <tr><td class="mono">Ctrl+S / Ctrl+O</td><td>Save / load universe</td><td class="mono">F11</td><td>Fullscreen</td></tr>
+      </table>
+    </div></div>
+  </div>
+</section>
+
+<section id="tech" style="background:var(--bg2)">
+  <div class="wrap">
+    <h2>Under the hood</h2>
+    <p class="sub">Zero external dependencies — the whole app, loader and installer are first-party.</p>
+    <div class="grid">
+      <div class="card"><h3>C# · OpenGL 3.3</h3><p>Hand-rolled WGL context bootstrap (core &amp; compatibility profiles, with a full self-diagnostic dialog) and a self-contained GL 3.3 loader — no GLEW, no GLFW, no frameworks.</p></div>
+      <div class="card"><h3>Physics</h3><p>Leapfrog KDK integrator at 512 substeps/s, softening ε = 10⁻⁴, reversible time, collision merge with momentum conservation.</p></div>
+      <div class="card"><h3>CI · 4 green jobs</h3><p>Headless simulation tests (Linux) · Win32 layer compile-check · MSVC build + NSIS installer + PE/import-table Win7 audit · zig MinGW-w64 cross build with the same audit.</p></div>
+    </div>
+    <div style="height:18px"></div>
+    <div class="step"><div class="n">1</div><p><b>Build:</b> <span class="mono">build.bat</span> (MSVC one-click), the <span class="mono">vs/</span> solution, or raw CMake 3.16+.</p></div>
+    <div class="step"><div class="n">2</div><p><b>Test:</b> <span class="mono">test_sim</span> runs the N-body core headlessly on any OS — orbits, collisions and saves verified by CI on every push.</p></div>
+    <div class="step"><div class="n">3</div><p><b>Ship:</b> GitHub Actions produces the NSIS installer and both exes; PE headers and import tables are audited for Windows 7 on every run.</p></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span>◉ <b>Universe Sandbox 3D</b></span>
+      <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D">GitHub</a>
+      <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/pull/1">Pull request #1</a>
+      <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions">CI runs</a>
+      <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions/runs/39992395519/artifacts">Latest artifacts</a>
+    </div>
+    <div class="foot-note">MIT licensed · C# / OpenGL 3.3 / raw Win32 · the hero animation is a live 9-body N-simulation rendered on canvas, same physics as the app (G = 4π², leapfrog).</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var cv = document.getElementById("space");
+  var ctx = cv.getContext("2d");
+  var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    var r = cv.parentElement.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener("resize", resize);
+
+  // ---- starfield (static positions, twinkling) ----
+  var stars = [];
+  function makeStars(){
+    stars = [];
+    var n = Math.floor(W * H / 2600);
+    for (var i=0;i<n;i++){
+      stars.push({x:Math.random()*W, y:Math.random()*H,
+                  r:Math.random()*1.2+0.3, p:Math.random()*6.28,
+                  s:0.5+Math.random()*1.5, c:Math.random()});
+    }
+  }
+
+  // ---- N-body demo: sun + 8 planets (units: AU, years, G*M_sun = 4*pi^2) ----
+  var G = 4 * Math.PI * Math.PI;
+  var bodies = [
+    {m:1.0000, r:0.0,  x:0, y:0, vx:0, vy:0, rad:26, col:"#ffd76a", glow:true,  name:"Sol"},
+    {m:0.000002, r:0.42, rad:3.0, col:"#b8b2a8", name:"Mercury"},
+    {m:0.000005, r:0.62, rad:4.6, col:"#e6c98a", name:"Venus"},
+    {m:0.000006, r:0.85, rad:4.9, col:"#5aa9ff", name:"Earth"},
+    {m:0.000002, r:1.05, rad:3.8, col:"#e0703f", name:"Mars"},
+    {m:0.000300, r:1.55, rad:10.5,col:"#d8a568", name:"Jupiter"},
+    {m:0.000180, r:2.10, rad:9.0, col:"#e8d5a3", name:"Saturn", ring:true},
+    {m:0.000050, r:2.75, rad:6.2, col:"#8fd8e8", name:"Uranus"},
+    {m:0.000050, r:3.40, rad:6.0, col:"#5f7fe8", name:"Neptune"}
+  ];
+  function initBodies(){
+    for (var i=1;i<bodies.length;i++){
+      var b = bodies[i];
+      var a = Math.random()*Math.PI*2;
+      b.x = b.r * Math.cos(a); b.y = b.r * Math.sin(a);
+      var v = Math.sqrt(G / b.r);          // circular orbit speed
+      b.vx = -v * Math.sin(a); b.vy =  v * Math.cos(a);
+      b.trail = [];
+    }
+  }
+
+  var t = 0, last = null, running = true;
+  function physics(dtYears){
+    var SUB = 8, h = dtYears / SUB;
+    var n = bodies.length;
+    for (var s=0;s<SUB;s++){
+      var ax = new Array(n), ay = new Array(n);
+      for (var i=0;i<n;i++){
+        ax[i]=0; ay[i]=0;
+      }
+      for (var i2=0;i2<n;i2++){
+        for (var j2=i2+1;j2<n;j2++){
+          var dx = bodies[j2].x - bodies[i2].x;
+          var dy = bodies[j2].y - bodies[i2].y;
+          var d2 = dx*dx + dy*dy + 1e-4;
+          var inv = 1/Math.sqrt(d2);
+          var f = G * inv / d2;
+          ax[i2] += f * bodies[j2].m * dx; ay[i2] += f * bodies[j2].m * dy;
+          ax[j2] -= f * bodies[i2].m * dx; ay[j2] -= f * bodies[i2].m * dy;
+        }
+      }
+      for (var k=0;k<n;k++){
+        bodies[k].vx += ax[k]*h; bodies[k].vy += ay[k]*h;
+        bodies[k].x  += bodies[k].vx*h; bodies[k].y += bodies[k].vy*h;
+      }
+    }
+  }
+
+  var PPAU = 0; // pixels per AU, set on resize
+  function draw(dt){
+    t += dt;
+    var scale = Math.min(W, H) * 0.155;   // AU -> px
+    // keep orbits inside the frame
+    scale = Math.min(scale, (Math.min(W,H)/2 - 40) / 3.4);
+
+    ctx.clearRect(0,0,W,H);
+    // sky gradient
+    var g = ctx.createRadialGradient(W*0.5,H*0.42,10, W*0.5,H*0.5, Math.max(W,H)*0.75);
+    g.addColorStop(0,"#0b1226"); g.addColorStop(0.55,"#070b18"); g.addColorStop(1,"#04060d");
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    // stars
+    for (var i=0;i<stars.length;i++){
+      var st = stars[i];
+      var a = 0.35 + 0.45 * (0.5 + 0.5*Math.sin(t*st.s + st.p));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = st.c > 0.85 ? "#cfe4ff" : (st.c > 0.6 ? "#ffffff" : "#aebfdd");
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    var cx = W*0.5, cy = H*0.5;
+
+    // trails
+    for (var b2=1;b2<bodies.length;b2++){
+      var bd = bodies[b2];
+      bd.trail.push(bd.x, bd.y);
+      if (bd.trail.length > 480) bd.trail.splice(0,2);
+      var len = bd.trail.length/2;
+      if (len > 2){
+        ctx.lineWidth = 1;
+        for (var s2=1;s2<len;s2++){
+          var f = s2/len;
+          ctx.strokeStyle = bd.col;
+          ctx.globalAlpha = f*f*0.5;
+          ctx.beginPath();
+          ctx.moveTo(cx + bd.trail[(s2-1)*2]*scale, cy + bd.trail[(s2-1)*2+1]*scale);
+          ctx.lineTo(cx + bd.trail[s2*2]*scale,     cy + bd.trail[s2*2+1]*scale);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // bodies
+    for (var b3=0;b3<bodies.length;b3++){
+      var P = bodies[b3];
+      var px = cx + P.x*scale, py = cy + P.y*scale;
+      if (P.glow){
+        var gg = ctx.createRadialGradient(px,py,0, px,py,P.rad*3.2);
+        gg.addColorStop(0,"rgba(255,214,106,0.85)");
+        gg.addColorStop(0.35,"rgba(255,170,60,0.28)");
+        gg.addColorStop(1,"rgba(255,150,40,0)");
+        ctx.fillStyle = gg;
+        ctx.beginPath(); ctx.arc(px,py,P.rad*3.2,0,6.2832); ctx.fill();
+      }
+      if (P.ring){
+        ctx.save();
+        ctx.translate(px,py); ctx.rotate(-0.45);
+        ctx.strokeStyle = "rgba(232,213,163,0.55)"; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.ellipse(0,0,P.rad*1.9,P.rad*0.7,0,0,6.2832); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.fillStyle = P.col;
+      ctx.beginPath(); ctx.arc(px,py,P.rad,0,6.2832); ctx.fill();
+      if (!P.glow){
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        ctx.beginPath(); ctx.arc(px,py,P.rad, 0.6, 5.4); ctx.arc(px,py,P.rad*0.55, 5.4, 0.6, true); ctx.fill();
+      }
+    }
+
+    // HUD chip
+    ctx.font = "11px Consolas, monospace";
+    ctx.fillStyle = "rgba(139,152,184,0.85)";
+    ctx.fillText("N-BODY DEMO · G = 4π² · leapfrog · 9 bodies", 16, H - 16);
+  }
+
+  function frame(ts){
+    if (last === null) last = ts;
+    var dt = Math.min((ts - last)/1000, 0.05);
+    last = ts;
+    if (running){
+      physics(dt * 0.22); // 0.22 years per second
+      draw(dt);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // pause when hero is out of view
+  if ("IntersectionObserver" in window){
+    new IntersectionObserver(function(es){
+      running = es[0].isIntersecting;
+    }, {threshold:0.02}).observe(cv);
+  }
+
+  resize(); makeStars(); initBodies();
+  requestAnimationFrame(frame);
+  window.addEventListener("resize", function(){ makeStars(); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# C# build output
+bin/
+obj/
+*.user
+*.suo
+
+# build artifacts
+UniverseSandbox3D.exe
+*.pdb
