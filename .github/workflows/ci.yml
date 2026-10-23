@@ -109,7 +109,12 @@ jobs:
       - name: Create NSIS installer
         shell: pwsh
         run: |
-          makensis tools\installer\setup.nsi
+          $out = & makensis -V2 tools\installer\setup.nsi 2>&1
+          $out | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) {
+            $out | Select-Object -Last 25 | ForEach-Object { Write-Host "::error title=NSIS-failure::$_" }
+            exit 1
+          }
           if (-not (Test-Path "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe")) { throw "installer was not produced" }
           Get-Item "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe" | Format-List Name,Length
       - name: Upload installer and exe
