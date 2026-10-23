@@ -26,7 +26,10 @@ endif()
 # ----------------------------------------------------------------------------
 if(MSVC)
     # Target Windows 7 and later; keep the Win10/11 SDK happy.
-    set(CMAKE_SYSTEM_VERSION 7)
+    # NOTE: the value is the PE subsystem version - Windows 7 is 6.1
+    # (not "7"); a higher minimum would make the Win7 loader refuse
+    # to start the exe.
+    set(CMAKE_SYSTEM_VERSION 6.1)
     add_compile_definitions(_WIN32_WINNT=0x0601 WINVER=0x0601 NOMINMAX)
     add_compile_options(/W3 /utf-8)
 else()
