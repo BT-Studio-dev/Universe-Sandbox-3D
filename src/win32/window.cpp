@@ -196,9 +196,35 @@ bool Window::create(HINSTANCE hInstance, const char* title, int width, int heigh
     }
 
     // ---- GL 3.3 core context ----
+    // Resolve the always-available opengl32 entry points first. (Some GL
+    // functions need a current context to resolve; they are re-resolved
+    // after the context exists below.)
+    gl33::load();
+
+    // Step 1: a temporary legacy context. Several drivers (notably Intel,
+    // and some AMD/NVIDIA on Windows 7) only expose
+    // wglCreateContextAttribsARB through wglGetProcAddress once *some*
+    // context is current - the MSDN-recommended creation flow.
+    void* ctx = nullptr;   // GL context handle (WGL HGLRC-compatible)
+    if (gl33::wglCreateContext) {
+        ctx = gl33::wglCreateContext(hdc_);
+    }
+    if (!ctx) {
+        setError(this, "wglCreateContext failed (error %lu)",
+                 (unsigned)GetLastError());
+        return false;
+    }
+    if (!gl33::wglMakeCurrent(hdc_, ctx)) {
+        setError(this, "wglMakeCurrent failed (error %lu)", (unsigned)GetLastError());
+        gl33::wglDeleteContext(ctx);
+        return false;
+    }
+
+    // Step 2: with a context current, a 3.3-capable driver now exposes
+    // wglCreateContextAttribsARB.
     if (!gl33::wglCreateContextAttribsARB) gl33::load();
 
-    void* ctx = nullptr;   // GL context handle (WGL HGLRC-compatible)
+    void* newCtx = nullptr;
     if (gl33::wglCreateContextAttribsARB) {
         const int attribs[] = {
             WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
@@ -206,23 +232,21 @@ bool Window::create(HINSTANCE hInstance, const char* title, int width, int heigh
             WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
             0,
         };
-        ctx = gl33::wglCreateContextAttribsARB(hdc_, nullptr, attribs);
+        newCtx = gl33::wglCreateContextAttribsARB(hdc_, nullptr, attribs);
     }
-    if (!ctx && gl33::wglCreateContext) {
-        // Fallback: legacy context (old driver). We'll detect the actual
-        // version and report a clear error if it is below 3.3.
-        ctx = gl33::wglCreateContext(hdc_);
+    if (newCtx) {
+        gl33::wglDeleteContext(ctx);
+        ctx = newCtx;
+        if (!gl33::wglMakeCurrent(hdc_, ctx)) {
+            setError(this, "wglMakeCurrent failed (error %lu)", (unsigned)GetLastError());
+            gl33::wglDeleteContext(ctx);
+            return false;
+        }
     }
-    if (!ctx) {
-        setError(this, "wglCreateContext(AttribsARB) failed (error %lu)",
-                 (unsigned)GetLastError());
-        return false;
-    }
+    // else: keep the legacy context; the version check below reports the
+    // driver's actual capabilities and the app shows a clear error.
+
     glctx_ = ctx;
-    if (!gl33::wglMakeCurrent(hdc_, ctx)) {
-        setError(this, "wglMakeCurrent failed (error %lu)", (unsigned)GetLastError());
-        return false;
-    }
 
     if (!gl33::load()) {
         setError(this, "Failed to resolve OpenGL entry points (wglGetProcAddress).");

@@ -65,11 +65,12 @@ bool App::init(HINSTANCE hInstance) {
         return false;
     }
     if (!gl33::isCompatible()) {
-        const char* msg =
+        const std::string msg =
             "This computer's graphics driver reports an OpenGL version below 3.3.\n\n"
+            "Detected: " + gl33::versionString() + "\n\n"
             "Universe Sandbox 3D needs a 3D card with an OpenGL 3.3-capable driver.\n"
             "Update the graphics driver and try again.";
-        MessageBoxA(nullptr, msg, "Universe Sandbox 3D - incompatible GPU driver",
+        MessageBoxA(nullptr, msg.c_str(), "Universe Sandbox 3D - incompatible GPU driver",
                     MB_OK | MB_ICONERROR);
         return false;
     }
