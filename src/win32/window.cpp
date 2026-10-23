@@ -198,7 +198,7 @@ bool Window::create(HINSTANCE hInstance, const char* title, int width, int heigh
     // ---- GL 3.3 core context ----
     if (!gl33::wglCreateContextAttribsARB) gl33::load();
 
-    HGLRC ctx = nullptr;
+    void* ctx = nullptr;   // GL context handle (WGL HGLRC-compatible)
     if (gl33::wglCreateContextAttribsARB) {
         const int attribs[] = {
             WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
@@ -248,7 +248,7 @@ bool Window::create(HINSTANCE hInstance, const char* title, int width, int heigh
 void Window::destroy() {
     if (glctx_) {
         gl33::wglMakeCurrent(nullptr, nullptr);
-        gl33::wglDeleteContext(static_cast<HGLRC>(glctx_));
+        gl33::wglDeleteContext(glctx_);
         glctx_ = nullptr;
     }
     if (hdc_) {

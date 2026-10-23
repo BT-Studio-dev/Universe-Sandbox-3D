@@ -85,7 +85,8 @@ jobs:
           $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release 2>&1"
           $out | ForEach-Object { Write-Host $_ }
           if ($LASTEXITCODE -ne 0) {
-            $out | Select-Object -Last 30 | ForEach-Object { Write-Host "::error title=MSVC-configure-failure::$_" }
+            $out | Where-Object { $_ -match "error|FAILED" } | Select-Object -First 25 | ForEach-Object { Write-Host "::error title=MSVC-configure-failure::$_" }
+            $out | Select-Object -Last 10 | ForEach-Object { Write-Host "::error title=MSVC-configure-tail::$_" }
             exit 1
           }
       - name: Build (Release)
@@ -96,7 +97,8 @@ jobs:
           $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake --build build --parallel 2>&1"
           $out | ForEach-Object { Write-Host $_ }
           if ($LASTEXITCODE -ne 0) {
-            $out | Select-Object -Last 30 | ForEach-Object { Write-Host "::error title=MSVC-build-failure::$_" }
+            $out | Where-Object { $_ -match "error|FAILED" } | Select-Object -First 25 | ForEach-Object { Write-Host "::error title=MSVC-build-failure::$_" }
+            $out | Select-Object -Last 10 | ForEach-Object { Write-Host "::error title=MSVC-build-tail::$_" }
             exit 1
           }
       - name: Verify exe
@@ -134,8 +136,11 @@ jobs:
           cmake --build build --parallel 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            tail -n 30 build.log | while IFS= read -r line; do
+            grep -nE "error:|Error [0-9]|undefined reference|collect2|ld returned|FAILED" build.log | head -25 | while IFS= read -r line; do
               printf '::error title=MinGW-build-failure::%s\n' "$line"
+            done
+            tail -n 10 build.log | while IFS= read -r line; do
+              printf '::error title=MinGW-build-tail::%s\n' "$line"
             done
             exit "$status"
           fi

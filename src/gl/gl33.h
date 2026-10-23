@@ -41,8 +41,10 @@ typedef char            GLchar;
 typedef unsigned char   GLubyte;
 typedef double          GLdouble;
 
-typedef void* HGLRC;   // opaque GL context handle (Windows: HGLRC)
-typedef void* HDC2;    // opaque device context handle (Windows: HDC)
+// NOTE: GL context / device handles are kept as plain void* (WGL's HGLRC
+// and HDC are opaque pointers of identical ABI). We deliberately do NOT
+// typedef HGLRC/HDC here: the Windows SDK already defines them, and
+// redefining them breaks the build.
 
 // ---------------------------------------------------------------------------
 //  Constants (the subset this project uses)
@@ -269,12 +271,12 @@ typedef const GLubyte* (*PFNGLGETSTRINGPROC2)(GLenum);
 typedef void    (*PFNGLGETINTEGERVPROC)(GLenum, GLint*);
 typedef GLenum  (*PFNGLGETERRORPROC)(void);
 
-// WGL
-typedef HGLRC   (*PFNWGLCREATECONTEXTPROC)(void* /*HDC*/);
-typedef HGLRC   (*PFNWGLCREATECONTEXTATTRIBSARBPROC)(void*, HGLRC, const int*);
-typedef int     (*PFNWGLMAKECURRENTPROC)(void* /*HDC*/, HGLRC);
-typedef HGLRC   (*PFNWGLGETCURRENTCONTEXTPROC)(void);
-typedef int     (*PFNWGLDELETECONTEXTPROC)(HGLRC);
+// WGL (context and device handles are opaque void*)
+typedef void*   (*PFNWGLCREATECONTEXTPROC)(void* /*HDC*/);
+typedef void*   (*PFNWGLCREATECONTEXTATTRIBSARBPROC)(void*, void*, const int*);
+typedef int     (*PFNWGLMAKECURRENTPROC)(void* /*HDC*/, void*);
+typedef void*   (*PFNWGLGETCURRENTCONTEXTPROC)(void);
+typedef int     (*PFNWGLDELETECONTEXTPROC)(void*);
 typedef void*   (*PFNWGLGETPROCADDRESSPROC)(const char*);
 
 
