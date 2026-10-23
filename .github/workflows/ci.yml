@@ -128,16 +128,20 @@ jobs:
       - name: Ensure Windows cross compiler
         id: toolchain
         run: |
+          set -e
           if command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then
             echo "Using preinstalled MinGW-w64"
             x86_64-w64-mingw32-g++ --version | head -1
             echo "kind=mingw" >> "$GITHUB_OUTPUT"
           else
             echo "MinGW-w64 not preinstalled; using zig (pypi) cross compiler"
-            python3 -m pip install --quiet ziglang
-            zig version
-            printf '#!/bin/sh\nexec zig cc "$@"\n' > zigcc
-            printf '#!/bin/sh\nexec zig c++ "$@"\n' > zigcxx
+            # venv avoids PEP 668 (externally-managed) and PATH issues
+            python3 -m venv zigvenv
+            ./zigvenv/bin/pip install --quiet ziglang
+            ZIG="$PWD/zigvenv/bin/zig"
+            "$ZIG" version
+            printf '#!/bin/sh\nexec %s cc "$@"\n'  "$ZIG" > zigcc
+            printf '#!/bin/sh\nexec %s c++ "$@"\n' "$ZIG" > zigcxx
             chmod +x zigcc zigcxx
             echo "kind=zig" >> "$GITHUB_OUTPUT"
           fi
