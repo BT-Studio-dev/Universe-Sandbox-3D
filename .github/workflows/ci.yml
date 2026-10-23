@@ -117,18 +117,45 @@ jobs:
               $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
             }
             if (-not $makensis) {
-              Write-Host "NSIS not found on this image; downloading NSIS-3.10.zip"
+              Write-Host "NSIS not preinstalled on this image; trying install options"
               if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
                 Write-Host "::error title=NSIS-env::curl.exe not found"
                 exit 1
               }
-              curl.exe -fsSL --retry 3 -o nsis.zip "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.10/NSIS-3.10.zip/download"
-              if ($LASTEXITCODE -ne 0) { Write-Host "::error title=NSIS-download::curl failed with exit $LASTEXITCODE"; exit 1 }
-              Write-Host ("Downloaded nsis.zip: {0} bytes" -f (Get-Item nsis.zip).Length)
-              Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
-              $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
-              if (-not $found) { Write-Host "::error title=NSIS-download::makensis.exe not found in extracted archive"; exit 1 }
-              $makensis = $found.FullName
+              # 1) Chocolatey, if the image still ships it
+              if (Get-Command choco -ErrorAction SilentlyContinue) {
+                Write-Host "Trying 'choco install nsis'"
+                $chocoOut = & choco install nsis -y --no-progress 2>&1
+                $chocoOut | ForEach-Object { Write-Host $_ }
+                $cand = "C:\ProgramData\chocolatey\tools\nsis\makensis.exe"
+                if ($LASTEXITCODE -eq 0 -and (Test-Path $cand)) { $makensis = $cand }
+              }
+              # 2) Official NSIS binaries, newest first
+              if (-not $makensis) {
+                $urls = @(
+                  "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.11/NSIS-3.11.zip/download",
+                  "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.10/NSIS-3.10.zip/download",
+                  "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.09/NSIS-3.09.zip/download",
+                  "https://distfiles.macports.org/nsis/NSIS-3.10.zip"
+                )
+                $ok = $false
+                foreach ($u in $urls) {
+                  Write-Host "Trying $u"
+                  curl.exe -fsSL --retry 2 -o nsis.zip $u
+                  if ($LASTEXITCODE -eq 0) {
+                    Write-Host ("Downloaded nsis.zip: {0} bytes" -f (Get-Item nsis.zip).Length)
+                    $ok = $true
+                    break
+                  }
+                  Write-Host "  (curl exit $LASTEXITCODE, trying next)"
+                }
+                if (-not $ok) { Write-Host "::error title=NSIS-download::all NSIS download URLs failed (see log above)"; exit 1 }
+                Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
+                $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
+                if (-not $found) { Write-Host "::error title=NSIS-download::makensis.exe not found in extracted archive"; exit 1 }
+                $makensis = $found.FullName
+              }
+              if (-not $makensis) { Write-Host "::error title=NSIS-missing::no working NSIS install method on this image"; exit 1 }
             }
             Write-Host "Using makensis: $makensis"
             $out = & $makensis -V2 tools\installer\setup.nsi 2>&1
