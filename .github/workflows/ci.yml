@@ -109,29 +109,40 @@ jobs:
       - name: Create NSIS installer
         shell: pwsh
         run: |
-          $makensis = $null
-          $cmd = Get-Command makensis -ErrorAction SilentlyContinue
-          if ($cmd) { $makensis = $cmd.Source }
-          if (-not $makensis -and (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) {
-            $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
-          }
-          if (-not $makensis) {
-            Write-Host "NSIS not found on this image; downloading NSIS-3.10.zip"
-            curl.exe -fsSL --retry 3 -o nsis.zip "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.10/NSIS-3.10.zip/download"
-            Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
-            $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
-            if (-not $found) { Write-Host "::error title=NSIS-download::download or extraction failed"; exit 1 }
-            $makensis = $found.FullName
-          }
-          Write-Host "Using makensis: $makensis"
-          $out = & $makensis -V2 tools\installer\setup.nsi 2>&1
-          $out | ForEach-Object { Write-Host $_ }
-          if ($LASTEXITCODE -ne 0) {
-            $out | Select-Object -Last 25 | ForEach-Object { Write-Host "::error title=NSIS-failure::$_" }
+          try {
+            $makensis = $null
+            $cmd = Get-Command makensis -ErrorAction SilentlyContinue
+            if ($cmd) { $makensis = $cmd.Source }
+            if (-not $makensis -and (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) {
+              $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
+            }
+            if (-not $makensis) {
+              Write-Host "NSIS not found on this image; downloading NSIS-3.10.zip"
+              if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+                Write-Host "::error title=NSIS-env::curl.exe not found"
+                exit 1
+              }
+              curl.exe -fsSL --retry 3 -o nsis.zip "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/3.10/NSIS-3.10.zip/download"
+              if ($LASTEXITCODE -ne 0) { Write-Host "::error title=NSIS-download::curl failed with exit $LASTEXITCODE"; exit 1 }
+              Write-Host ("Downloaded nsis.zip: {0} bytes" -f (Get-Item nsis.zip).Length)
+              Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
+              $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
+              if (-not $found) { Write-Host "::error title=NSIS-download::makensis.exe not found in extracted archive"; exit 1 }
+              $makensis = $found.FullName
+            }
+            Write-Host "Using makensis: $makensis"
+            $out = & $makensis -V2 tools\installer\setup.nsi 2>&1
+            $out | ForEach-Object { Write-Host $_ }
+            if ($LASTEXITCODE -ne 0) {
+              $out | Select-Object -Last 25 | ForEach-Object { Write-Host "::error title=NSIS-failure::$_" }
+              exit 1
+            }
+            if (-not (Test-Path "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe")) { throw "installer was not produced" }
+            Get-Item "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe" | Format-List Name,Length
+          } catch {
+            Write-Host "::error title=NSIS-step-unhandled::$_"
             exit 1
           }
-          if (-not (Test-Path "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe")) { throw "installer was not produced" }
-          Get-Item "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe" | Format-List Name,Length
       - name: Upload installer and exe
         uses: actions/upload-artifact@v4
         with:
