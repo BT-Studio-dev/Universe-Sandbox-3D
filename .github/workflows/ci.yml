@@ -85,10 +85,7 @@ jobs:
           $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release 2>&1"
           $out | ForEach-Object { Write-Host $_ }
           if ($LASTEXITCODE -ne 0) {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY "### MSVC configure failed - last 60 lines"
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
-            ($out | Select-Object -Last 60) | ForEach-Object { Add-Content -Path $env:GITHUB_STEP_SUMMARY $_ }
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            $out | Select-Object -Last 30 | ForEach-Object { Write-Host "::error title=MSVC-configure-failure::$_" }
             exit 1
           }
       - name: Build (Release)
@@ -99,10 +96,7 @@ jobs:
           $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake --build build --parallel 2>&1"
           $out | ForEach-Object { Write-Host $_ }
           if ($LASTEXITCODE -ne 0) {
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY "### MSVC build failed - last 80 lines"
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
-            ($out | Select-Object -Last 80) | ForEach-Object { Add-Content -Path $env:GITHUB_STEP_SUMMARY $_ }
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            $out | Select-Object -Last 30 | ForEach-Object { Write-Host "::error title=MSVC-build-failure::$_" }
             exit 1
           }
       - name: Verify exe
@@ -137,15 +131,13 @@ jobs:
             -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
       - name: Build
         run: |
-          set -o pipefail
-          if ! cmake --build build --parallel 2>&1 | tee build.log; then
-            {
-              echo "### MinGW build failed - last 80 lines"
-              echo '```'
-              tail -n 80 build.log
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
+          cmake --build build --parallel 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            tail -n 30 build.log | while IFS= read -r line; do
+              printf '::error title=MinGW-build-failure::%s\n' "$line"
+            done
+            exit "$status"
           fi
       - name: Verify exe
         run: |
