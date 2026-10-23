@@ -66,6 +66,7 @@ if(WIN32)
         src/main.cpp
         src/app.cpp
         src/core/shaders.cpp
+        src/win32/compat.cpp
         src/win32/window.cpp
         src/gl/gl33.cpp
         src/render/renderer.cpp

@@ -220,6 +220,15 @@ BOOL        ShowCursor(int);
 int         MessageBoxA(HWND, LPCSTR, LPCSTR, UINT);
 DWORD       GetLastError();
 DWORD       GetTickCount();
+
+typedef union _LARGE_INTEGER {
+    struct { unsigned long LowPart; long HighPart; } _stub_u;
+    long long QuadPart;
+} LARGE_INTEGER, *PLARGE_INTEGER;
+typedef struct _FILETIME { unsigned short wLowDateTime, wHighDateTime; } FILETIME, *LPFILETIME;
+int  QueryPerformanceCounter(PLARGE_INTEGER);
+int  QueryPerformanceFrequency(PLARGE_INTEGER);
+void GetSystemTimeAsFileTime(LPFILETIME);
 SHORT       GetAsyncKeyState(int);
 HMODULE     LoadLibraryA(LPCSTR);
 HMODULE     GetModuleHandleA(LPCSTR);

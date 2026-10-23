@@ -5,8 +5,8 @@
 #include "gl/gl33.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
+#include <ctime>
 #include <cstdio>
 #include <cstdlib>
 #include <random>
@@ -110,12 +110,20 @@ bool App::init(HINSTANCE hInstance) {
 
 void App::run() {
     if (!inited_) return;
-    using clock = std::chrono::high_resolution_clock;
-    auto prev = clock::now();
+    // Frame timing via QueryPerformanceCounter - a Windows 2000 API that
+    // is monotonic and high-resolution. Deliberately NOT
+    // std::chrono::high_resolution_clock: the MinGW/zig libc
+    // implementation of <chrono> imports GetSystemTimePreciseAsFileTime
+    // (a Windows 8+ kernel32 API) at load time, which makes the
+    // cross-built exe unlaunchable on Windows 7.
+    LARGE_INTEGER freq, prev;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&prev);
     while (running_) {
         if (!Window::pumpMessage()) break;
-        const auto now = clock::now();
-        float dt = std::chrono::duration<float>(now - prev).count();
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        float dt = (float)((now.QuadPart - prev.QuadPart) / (double)freq.QuadPart);
         prev = now;
         dt = clampf(dt, 0.0f, 0.1f);
 

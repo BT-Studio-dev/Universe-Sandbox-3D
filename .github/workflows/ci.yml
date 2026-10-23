@@ -268,6 +268,24 @@ jobs:
             exit 1
           }
           Write-Host ("::warning title=PE-verify-win7-ok::{0}" -f (($all | Where-Object { $_ -is [string] }) -join ' | '))
+      - name: Audit DLL imports (Windows 7 compatibility)
+        shell: pwsh
+        env:
+          VSPATH: ${{ steps.vs.outputs.vsPath }}
+        run: |
+          # Same guard as the cross job: the Win7 loader refuses an image
+          # that imports an API Windows 7 does not have.
+          $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && dumpbin /imports build\us3d.exe 2>&1"
+          $text = ($out | Out-String)
+          $bad = @()
+          foreach ($s in @("GetSystemTimePreciseAsFileTime","GetFileInformationByHandleEx","GetSystemCpuStatistics","GetSystemCpuInformation","GetCpuGroupInformation")) {
+            if ($text -match [regex]::Escape($s)) { $bad += $s }
+          }
+          if ($bad.Count -gt 0) {
+            Write-Host ("::error title=Win7-incompatible-import::us3d.exe imports APIs missing on Windows 7: {0}" -f ($bad -join ', '))
+            exit 1
+          }
+          Write-Host "Import audit: no Win8+ APIs in the import table (Win7-safe)"
       - name: Upload NSIS diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -385,6 +403,23 @@ jobs:
             printf '%s: machine=%s PE32+=%s minOS=%s.%s subsystemVersion=%s.%s\n' "$f" "$machine" "$plus" "$osmaj" "$osmin" "$svmaj" "$svmin"
           }
           dump_pe build/us3d.exe
+          # Import-table audit: the Win7 loader refuses the image if any
+          # imported API does not exist on Windows 7 (e.g.
+          # GetSystemTimePreciseAsFileTime, Windows 8+).
+          if [ "${{ steps.toolchain.outputs.kind }}" = "zig" ]; then
+            "$PWD/zigpkgs/ziglang/zig" objdump --imports build/us3d.exe > build/imports.txt 2>&1
+          else
+            x86_64-w64-mingw32-objdump -p build/us3d.exe > build/imports.txt 2>&1 || true
+          fi
+          bad=""
+          for sym in GetSystemTimePreciseAsFileTime GetFileInformationByHandleEx GetSystemCpuStatistics GetSystemCpuInformation GetCpuGroupInformation; do
+            if grep -q "$sym" build/imports.txt; then bad="$bad $sym"; fi
+          done
+          if [ -n "$bad" ]; then
+            printf '::error title=Win7-incompatible-import::us3d.exe imports APIs missing on Windows 7:%s\n' "$bad"
+            exit 1
+          fi
+          echo "Import audit: no Win8+ APIs in the import table (Win7-safe)"
           # Ship the Mesa/llvmpipe fallback launcher next to the exe.
           cp tools/run_mesa.bat build/run_mesa.bat
       - name: Upload cross-built exe

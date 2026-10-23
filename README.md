@@ -71,6 +71,11 @@ All panels work with mouse only; the keyboard shortcuts below still work.
 | OS | **Windows 7 SP1**, **Windows 10** or **Windows 11** — **64-bit (x64)** |
 | Graphics | Any GPU/driver with **OpenGL 3.3** (nearly everything from 2010 onward; the app checks and reports a clear error otherwise) |
 | RAM | 1 GB |
+| C runtime | The **installer / MSVC exe** is fully self-contained (static runtime).
+  The **cross-built exe** additionally needs the **Universal C Runtime on
+  Windows 7**, i.e. any VC++ 2015–2022 redistributable (most Win7 SP1
+  machines have it; install `vc_redist.x64.exe` if not). Windows 10/11
+  always have it built in. |
 
 ## Download a ready build (GitHub Actions)
 
