@@ -1,248 +1,124 @@
 # Universe Sandbox 3D
 
-A 3D gravitational universe sandbox written in **C++ / OpenGL 3.3 core** for
-**Windows (x64)**. Create stars, fling planets around them, watch orbits,
-collisions and mergers unfold in real time — then reverse time and undo it.
+A real-time **N-body gravity universe sandbox** rendered in OpenGL, written
+in **C#** (.NET Framework 4.5, raw Win32 + WGL — no WinForms, no external
+packages). Spawn stars, planets, moons and asteroid belts; bend gravity;
+reverse time; save your universe.
 
-No external dependencies: no GLFW, no GLEW, no asset files. The window,
-OpenGL context, font and every texture are created in code.
+Runs on **Windows 7 SP1, Windows 10 and Windows 11 — 64-bit (x64)**.
 
----
+> **Status:** C# rewrite in progress.
+> **Phase 1 (foundation) is complete**: Win32 window, the full WGL 3.3
+> core/compat context bootstrap (including the Mesa/llvmpipe-friendly
+> fallback path and the self-diagnosing "OpenGL 3.3 not available" dialog),
+> self-contained GL 3.3 loader, ~60 FPS render loop.
+> The complete C++ v1 implementation is preserved at git tag
+> [`v1-cpp`](https://github.com/BT-Studio-dev/Universe-Sandbox-3D/releases/tag/v1-cpp)
+> (and in the CI artifacts) for reference or fallback.
 
-## Features
+## Roadmap
 
-- **Real N-body gravity** (Newton, kick-drift-kick leapfrog integrator):
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Win32 window · WGL 3.3 bootstrap · GL 3.3 loader · render loop | ✅ done |
+| 2 | N-body core (leapfrog KDK, collisions/merges) + headless tests | next |
+| 3 | Renderer: shaders (GLSL 330), starfield, bodies, glow, trails, rings | — |
+| 4 | HUD + immediate-mode GUI (Add / Tools / Find / Sim / View panels) | — |
+| 5 | Presets · save/load · time controls · fullscreen | — |
+| 6 | CI build + Win7 PE/import audit · NSIS installer · final polish | — |
+
+## Features (target, as in C++ v1)
+
+- **Real N-body gravity** (Newton, kick-drift-kick leapfrog, G = 4π²):
   stable orbits, reversible time, momentum-conserving collisions/merges.
-- **Celestial bodies**: animated star surfaces, rocky planets, banded
-  gas giants, moons, asteroid belts — all procedural (no textures on disk).
-- **Full mouse UI** modelled on the original sandbox: bottom bar
-  (Add / Tools / Find / Sim / View), a time bar, and tabbed panels —
-  all drawn with a small immediate-mode GUI built on the GL quad pass.
-- **Time machine**: pause, 0.1×–32× speed, and full **time reversal** (`N`).
+- **Celestial bodies**: animated star surfaces, rocky planets, banded gas
+  giants, moons, asteroid belts — all procedural.
+- **Time machine**: pause, 0.1×–32× speed, full time reversal.
 - **Presets**: Solar System, Binary star, 400-body asteroid belt,
-  star+moon, and random universes.
-- **Save / load** the whole universe to a plain-text file (`Ctrl+S` / `Ctrl+O`).
-- Orbit/pan/zoom camera, motion trails, twinkling starfield, nebula sky,
-  sun glow, on-screen HUD with a built-in bitmap font.
-
-## User interface
-
-| Where | What |
-|---|---|
-| Bottom bar | **Add**, **Tools**, **Find** (center) and **Sim**, **View** (right) — each opens/closes its panel |
-| Time bar (bottom-left) | Pause, reverse/forward, simulated date and time speed (`wheel` over it changes speed) |
-| **Add** panel | Catalog of real bodies (Sun…Pluto), random moon/planet/star, proto-objects and saved scenarios. `Binary` spawns a gravitationally bound pair, `Auto orbit` places bodies on circular orbits, `Repeat` keeps the panel open |
-| **Tools** panel | Terraform (cycle rock/water/ice/air), Heat Beam (right-click cools), Torque (right-click reverses), Detonate (breaks the focused world into fragments), Slingshot, Brake, Circularize, Stop Orbit, Follow, Reset View |
-| **Find** panel | Searchable, tab-filtered list of every body (mass-sorted); click to select & fly to it; `wheel` scrolls |
-| **Sim** panel | Scenario name/body count, Gravity/Impacts/Debris/Heat toggles, Overview / Advanced (time speed, trails, pause) / Stats (energy, speeds, FPS) |
-| **View** panel | *Camera*: Looking at, Go to, See all, Reset; *Field of view* slider; *Worlds*: Atmospheres, Clouds, Charts (trails); *Colour by*: true colour / mass / speed / temperature; *Lamp*: on/off, side, strength, reach, colour temperature |
-| **Info** panel (auto when a body is selected) | *Physical* (mass, radius, density, temperature, gravity, pressure, luminosity, speed, rotation, orbital period, age, spectral type), *Materials*, *Climate*, *Orbit* (distance, period, semi-major axis, eccentricity), *Appearance* (colour, radius, mass, spin) |
-| Top-left | FPS + hamburger button (controls help) |
-
-All panels work with mouse only; the keyboard shortcuts below still work.
-
-## Controls
-
-| Input                | Action                                  |
-|----------------------|-----------------------------------------|
-| Left drag            | Orbit camera                            |
-| Right / middle drag  | Pan camera                              |
-| Mouse wheel          | Zoom                                    |
-| Left click           | Select body                             |
-| Double click         | Focus camera + zoom to body             |
-| `1` / `2` / `3`      | Spawn planet / star / asteroid          |
-| `Del`                | Delete selected body                    |
-| `Space`              | Pause / resume                          |
-| `+` / `-`            | Time speed up / down (0.1×–32×)         |
-| `N`                  | Reverse / restore time direction        |
-| `F`                  | Toggle camera follow                    |
-| `G`                  | Toggle motion trails                    |
-| `H`                  | Toggle help overlay                     |
-| `9` `8` `0` `7`      | Presets: solar / binary / belt / moon   |
-| `R`                  | New random universe                     |
-| `Ctrl+S` / `Ctrl+O`  | Save / load (`universe_save.txt`)       |
-| `F11`                | Toggle fullscreen                       |
-| `Esc`                | Close topmost panel, then quit          |
+  Star + Moon, random universes. **Save/load** to plain text.
+- Orbit/pan/zoom camera, motion trails, twinkling starfield, sun glow,
+  on-screen HUD — full mouse UI (bottom bar, time bar, tabbed panels).
 
 ## Requirements
 
 | | |
 |---|---|
 | OS | **Windows 7 SP1**, **Windows 10** or **Windows 11** — **64-bit (x64)** |
-| Graphics | Any GPU/driver with **OpenGL 3.3** (nearly everything from 2010 onward; the app checks and reports a clear error otherwise) |
+| Graphics | Any GPU/driver with **OpenGL 3.3** (or Mesa llvmpipe software rendering) |
+| Runtime | **.NET Framework 4.5** — preinstalled on Windows 7 SP1 / 8 / 10 / 11 |
 | RAM | 1 GB |
-| C runtime | The **installer / MSVC exe** is fully self-contained (static runtime).
-  The **cross-built exe** additionally needs the **Universal C Runtime on
-  Windows 7**, i.e. any VC++ 2015–2022 redistributable (most Win7 SP1
-  machines have it; install `vc_redist.x64.exe` if not). Windows 10/11
-  always have it built in. |
 
-## Download a ready build (GitHub Actions)
-
-No build tools needed — CI compiles the app on every commit and publishes
-downloadable artifacts. Go to the [Actions](https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions)
-tab, open the latest green run, and grab the artifact you want:
-
-| Artifact (on the run page → *Artifacts*) | Contents |
-|---|---|
-| `UniverseSandbox3D-Setup-win64` | **`UniverseSandbox3D-Setup-1.0.0-win64.exe`** — NSIS installer (adds a Start-menu entry, desktop shortcut and an uninstaller), plus the raw `us3d.exe`. Built with MSVC. |
-| `UniverseSandbox3D-exe-cross-win64` | Just `us3d.exe`, built with the MinGW-w64 cross compiler. |
-
-Both binaries run on **Windows 7 SP1 / 10 / 11 (x64)**. To install, run the
-Setup exe (accept the UAC prompt); or just copy `us3d.exe` anywhere and
-double-click it — it has no dependencies beyond a 64-bit OS and an
-OpenGL 3.3 driver.
+The C# build is a single self-contained exe with **no runtime
+prerequisites** beyond .NET 4.5 (no VC++ redistributable needed, unlike
+the C++ cross build).
 
 ## Building (Windows, x64)
 
-### Option A — one-click MSVC build (recommended)
-
-1. Install **CMake 3.16+** and **Visual Studio 2022** (or 2019) with the
-   *“Desktop development with C++”* workload.
-2. Double-click **`build.bat`** (or run it in a terminal).
-
-Output: `build\Release\us3d.exe`
-
-The project is compiled with `_WIN32_WINNT=0x0601`, so the binary targets
-Windows 7 while building against the Windows 10/11 SDK.
-
-### Option B — open the Visual Studio solution
-
-Open **`vs\UniverseSandbox.sln`** (x64, Debug/Release) and build.
-Output: `vs\bin\x64\Release\us3d.exe`.
-
-### Option C — MinGW-w64 (also the way to build *on* Windows 7)
-
-1. Install **CMake 3.16+** and a 64-bit **MinGW-w64** toolchain
-   (`x86_64-w64-mingw32-g++` in `PATH`).
-2. Run **`build_mingw.bat`**.
-
-Output: `build\us3d.exe`
-
-### Raw CMake
-
+### Option A — one-click, no Visual Studio needed
 ```bat
-cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
+build_csc.bat
 ```
+Uses the stock .NET Framework `csc.exe`. Output: `UniverseSandbox3D.exe`.
 
-## Building / testing anywhere (Linux, macOS)
+### Option B — Visual Studio
+Open `UniverseSandbox3D.csproj` (.NET Framework 4.5, x64, WinExe) and
+build.
 
-The physics core is platform-independent, so you can build and run the
-headless test suite and the Win32 compile-check on any machine:
-
-```sh
-cmake -B build && cmake --build build
-ctest --test-dir build --output-on-failure    # runs the physics tests
-cmake --build build --target stub_check       # compile-checks the Win32 layer
+### Run
+```bat
+UniverseSandbox3D.exe
 ```
+Phase 1 shows a dark window titled with the detected GL version and
+renderer (e.g. `… - 4.6.0 NVIDIA 566.36 | NVIDIA GeForce …`).
 
-- **`test_sim`** — verifies orbit stability (5 years), energy conservation
-  (<1% drift/year), collision mass/momentum conservation, time-reversal
-  round-trips and save/load round-trips.
-- **`stub_check`** — compiles every Windows-only translation unit against a
-  minimal stub `<windows.h>` (`tools/compile-check/`), catching real
-  errors in the Win32 code path without a Windows SDK.
+## Software rendering (VMs / no GPU driver)
 
-GitHub Actions (`.github/workflows/ci.yml`) runs all of the above plus real
-MSVC and MinGW-w64 Windows builds on every push.
+Same as v1: put the *Mesa for Windows* x64 DLLs (`opengl32.dll` +
+`libgallium_wgl.dll`, <https://www.mesa3d.org/download.html>) next to the
+exe and start with **`run_mesa.bat`**.
 
 ## Project layout
 
 ```
 src/
-  main.cpp               entry point (wWinMain, DPI awareness)
-  app.h/.cpp             application controller: input, actions, main loop
-  win32/window.h/.cpp    Win32 window + WGL 3.3 core context, input callbacks
-  gl/gl33.h/.cpp         self-contained OpenGL 3.3 loader (no GLEW)
-  render/
-    renderer.h/.cpp      shaders, meshes, starfield, trails, glow, font atlas
-    camera.h/.cpp        orbit camera + picking ray
-    hud.h/.cpp           2D overlay (text/rects)
-  core/
-    math.h               Vec3/Mat4 (column-major, GL-compatible)
-    body.h               celestial body
-    system.h/.cpp        N-body integrator, collisions, trails
-    presets.h/.cpp       solar system, binary, asteroid belt, random
-    savestate.h/.cpp     text save/load (US3D v2, reads v1)
-    catalog.h            Add-panel catalog + display/physics formatting
-    shaders.h/.cpp       GLSL 3.30 shaders (declarations / sources)
-  ui/
-    gui.h/.cpp           immediate-mode GUI (panels, buttons, sliders, discs)
-    panels.h/.cpp        the UI panels (Add/Tools/Find/Sim/View/Info/time bar)
-    font5x7.h            embedded 5x7 font (generated by tools/make_font.py)
-tests/test_sim.cpp       headless physics test suite
-tools/compile-check/     stub <windows.h> + check.sh (Linux compile check)
-vs/                      Visual Studio solution/project
+  Program.cs            entry point
+  App.cs                app controller, init + render loop (phase 1)
+  Win32/
+    NativeMethods.cs    Win32/WGL P/Invoke declarations
+    Window.cs           window + WGL 3.3 bootstrap + message loop
+    GL33.cs             self-contained OpenGL 3.3 loader
+  Core/                 (phase 2) N-body system, presets, save/load
+  Render/               (phase 3) renderer, camera, HUD, shaders
+  Ui/                   (phase 4) immediate-mode GUI + panels
+site/                   self-contained landing page (see below)
 ```
-
-## Simulation notes
-
-- **Units**: solar masses, AU, years → `G = 4π²`.
-- **Integrator**: kick-drift-kick leapfrog at 512 steps/year, substepped to
-  match the time speed. It is symplectic (orbits don't decay) and exactly
-  reversible — press `N` and watch the solar system un-happen.
-- **Collisions**: bodies that touch merge conserving mass and momentum;
-  the survivor grows.
-- **Sizes**: display radii are exaggerated (real planetary radii are ~0.00004
-  AU — invisible at system scale) and also drive collision detection. This
-  is a sandbox, not a paper.
-
-## Save file format
-
-```
-US3D SAVE 2
-time <years>
-reversed <0|1>
-body "<name>" <type> <x y z> <vx vy vz> <mass> <radius> <r g b> <bandFreq> \
-       <realRadiusAU> <surface> <temperatureC> <spin>
-```
-
-`surface`: 0 rock, 1 water, 2 ice, 3 air. v1 files (without the last four
-fields) are still loaded.
-
-## Troubleshooting
-
-- **“OpenGL 3.3 not available” dialog** — your graphics driver reports OpenGL
-  below 3.3 (common on old Windows 7 machines with very old GPU drivers, on
-  VMs, or on driver-less hardware). The dialog now prints a *Context
-  bootstrap* report showing exactly which 3.3-context attempt succeeded or
-  failed, plus the GL version / vendor / renderer — include it when
-  reporting the issue.
-
-  Two ways forward:
-
-  1. **Update the graphics driver** (real GPU, physical PC).
-  2. **Software rendering with Mesa/llvmpipe** (VMs, headless boxes, old
-     integrated GPUs). This is fully supported:
-     - Get the *Mesa for Windows* x64 build
-       (<https://www.mesa3d.org/download.html>) and place `opengl32.dll`
-       and `libgallium_wgl.dll` in the **same folder as `us3d.exe`**.
-     - Start the app with the included **`run_mesa.bat`** (it forces Mesa to
-       advertise an OpenGL 3.3 Core / GLSL 330 context). You can also do it
-       by hand in a terminal:
-       ```bat
-       set MESA_GL_VERSION_OVERRIDE=3.3FC
-       set MESA_GLSL_VERSION_OVERRIDE=330
-       us3d.exe
-       ```
-     Expect software-rendered frame rates (tens of FPS for a modest
-     particle count, not hundreds).
-
-- **Black screen on Windows 7 with integrated graphics** — same as above:
-  update the GPU driver, or use the Mesa/llvmpipe fallback; OpenGL 3.3 is
-  the minimum.
-- **Jittery at 32× speed** — that is 512 physics substeps per frame; it is
-  intentional to keep orbits stable at high speed.
-- **Where are saves?** Next to the executable (`universe_save.txt`).
-
-## License
-
-MIT — see [LICENSE](LICENSE).
 
 ## Website
 
 A self-contained landing page lives in `site/` (single `index.html`, no
-dependencies, no build step). Serve it with any static file server, e.g.
+dependencies). Serve it with any static file server, e.g.
 `python3 -m http.server --directory site`. The hero animation is a live
-9-body N-simulation rendered on `<canvas>` with the same physics as the app.
+9-body N-simulation rendered on `<canvas>` with the same physics as the
+app.
+
+## C++ v1
+
+The complete C++/OpenGL implementation (Windows 7/10/11, installer, CI)
+is preserved at tag **`v1-cpp`** — checkout that tag to rebuild it:
+```bat
+git checkout v1-cpp
+build.bat
+```
+
+## Troubleshooting
+
+- **“OpenGL 3.3 not available” dialog** — the dialog prints a full
+  *Context bootstrap* report (every 3.3-context attempt with its WGL
+  error code, plus GL version/vendor/renderer). Update the GPU driver,
+  or use the Mesa/llvmpipe fallback above.
+- **“UniverseSandbox3D.exe is not recognized…” on clean Windows 7** —
+  install .NET Framework 4.5+ (preinstalled on Win7 SP1 with updates).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
