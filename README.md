@@ -72,6 +72,22 @@ All panels work with mouse only; the keyboard shortcuts below still work.
 | Graphics | Any GPU/driver with **OpenGL 3.3** (nearly everything from 2010 onward; the app checks and reports a clear error otherwise) |
 | RAM | 1 GB |
 
+## Download a ready build (GitHub Actions)
+
+No build tools needed — CI compiles the app on every commit and publishes
+downloadable artifacts. Go to the [Actions](https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions)
+tab, open the latest green run, and grab the artifact you want:
+
+| Artifact (on the run page → *Artifacts*) | Contents |
+|---|---|
+| `UniverseSandbox3D-Setup-win64` | **`UniverseSandbox3D-Setup-1.0.0-win64.exe`** — NSIS installer (adds a Start-menu entry, desktop shortcut and an uninstaller), plus the raw `us3d.exe`. Built with MSVC. |
+| `UniverseSandbox3D-exe-cross-win64` | Just `us3d.exe`, built with the MinGW-w64 cross compiler. |
+
+Both binaries run on **Windows 7 SP1 / 10 / 11 (x64)**. To install, run the
+Setup exe (accept the UAC prompt); or just copy `us3d.exe` anywhere and
+double-click it — it has no dependencies beyond a 64-bit OS and an
+OpenGL 3.3 driver.
+
 ## Building (Windows, x64)
 
 ### Option A — one-click MSVC build (recommended)
