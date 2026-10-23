@@ -134,12 +134,14 @@ jobs:
             x86_64-w64-mingw32-g++ --version | head -1
             echo "kind=mingw" >> "$GITHUB_OUTPUT"
           else
-            echo "MinGW-w64 not preinstalled; using zig (pypi) cross compiler"
-            # venv avoids PEP 668 (externally-managed) and PATH issues
-            python3 -m venv zigvenv
-            ./zigvenv/bin/pip install --quiet ziglang
-            ZIG="$PWD/zigvenv/bin/zig"
-            "$ZIG" version
+            # The pypi 'ziglang' wheel is a plain zip that bundles the zig
+            # binary (with its mingw-w64 CRT) - no python, pip or apt needed.
+            echo "MinGW-w64 not preinstalled; downloading zig 0.17.0 wheel"
+            curl -fsSL --retry 3 -o ziglang.whl \
+              "https://files.pythonhosted.org/packages/fe/6f/e1c380fe61db36cb464d5d4d18c557338812500986885373e2550d4ebf6b/ziglang-0.17.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl"
+            unzip -q ziglang.whl -d zigpkgs
+            ZIG="$PWD/zigpkgs/ziglang/zig"
+            "$ZIG" version   # first run self-extracts the toolchain
             printf '#!/bin/sh\nexec %s cc "$@"\n'  "$ZIG" > zigcc
             printf '#!/bin/sh\nexec %s c++ "$@"\n' "$ZIG" > zigcxx
             chmod +x zigcc zigcxx
