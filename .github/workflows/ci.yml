@@ -128,8 +128,12 @@ jobs:
                 $chocoOut | ForEach-Object { Log $_ }
                 Diag "choco_exit=$LASTEXITCODE out=$(($chocoOut | Where-Object { $_ -match '^\s*\[|installed|error|warn' } | Select-Object -Last 4) -join ' / ')"
                 if ($LASTEXITCODE -eq 0) {
-                  $c2 = Get-Command makensis -ErrorAction SilentlyContinue
-                  if ($c2) { $makensis = $c2.Source }
+                  # The choco package runs NSIS's own installer -> Program Files (x86)\NSIS
+                  if (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") { $makensis = "C:\Program Files (x86)\NSIS\makensis.exe" }
+                  if (-not $makensis) {
+                    $c2 = Get-Command makensis -ErrorAction SilentlyContinue
+                    if ($c2) { $makensis = $c2.Source }
+                  }
                   if (-not $makensis -and (Test-Path "C:\ProgramData\chocolatey\bin\makensis.exe")) { $makensis = "C:\ProgramData\chocolatey\bin\makensis.exe" }
                   if (-not $makensis) {
                     $f = Get-ChildItem -Path "C:\ProgramData\chocolatey\lib\nsis" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1
