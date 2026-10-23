@@ -239,3 +239,10 @@ fields) are still loaded.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Website
+
+A self-contained landing page lives in `site/` (single `index.html`, no
+dependencies, no build step). Serve it with any static file server, e.g.
+`python3 -m http.server --directory site`. The hero animation is a live
+9-body N-simulation rendered on `<canvas>` with the same physics as the app.
