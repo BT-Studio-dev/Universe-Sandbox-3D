@@ -122,12 +122,30 @@ jobs:
             if ($makensis) { Diag "found=$makensis" }
             if (-not $makensis) {
               Log "NSIS not preinstalled; trying install options"
-              # 1) winget
-              if (Get-Command winget -ErrorAction SilentlyContinue) {
+              # 1) choco (proven present on the current windows image)
+              if (Get-Command choco -ErrorAction SilentlyContinue) {
+                $chocoOut = & choco install nsis -y --no-progress 2>&1
+                $chocoOut | ForEach-Object { Log $_ }
+                Diag "choco_exit=$LASTEXITCODE"
+                if ($LASTEXITCODE -eq 0) {
+                  $c2 = Get-Command makensis -ErrorAction SilentlyContinue
+                  if ($c2) { $makensis = $c2.Source }
+                  if (-not $makensis -and (Test-Path "C:\ProgramData\chocolatey\bin\makensis.exe")) { $makensis = "C:\ProgramData\chocolatey\bin\makensis.exe" }
+                  if (-not $makensis) {
+                    $f = Get-ChildItem -Path "C:\ProgramData\chocolatey\lib\nsis" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+                    if ($f) { $makensis = $f.FullName }
+                  }
+                }
+              } else { Diag "choco=missing" }
+              # 2) winget
+              if (-not $makensis -and (Get-Command winget -ErrorAction SilentlyContinue)) {
                 $wout = & winget search NSIS --accept-source-agreements 2>&1
                 $wout | ForEach-Object { Log $_ }
-                $results = $wout | Where-Object { $_ -match '^[A-Za-z0-9][A-Za-z0-9.]*\s+.*NSIS' -and $_ -notmatch '^\s*Id\s' -and $_ -notmatch '[█▒]' }
-                $wids = $results | ForEach-Object { ($_ -split '\s+')[0] }
+                $wids = $wout | ForEach-Object { ($_ -split '\s+') } |
+                        Where-Object { $_.Count -ge 2 -and $_ -contains 'NSIS' } |
+                        ForEach-Object { $_[0] } |
+                        Where-Object { $_ -ne 'Id' -and $_ -notmatch '[█▒]' } |
+                        Sort-Object -Unique
                 Diag "winget_search_ids=$($wids -join ';')"
                 if ($wids) {
                   $winst = & winget install --id $wids[0] -e --silent --accept-source-agreements --accept-package-agreements 2>&1
@@ -139,15 +157,6 @@ jobs:
                   $f = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1
                   if ($f) { $cands += $f.FullName }
                   if ($cands) { $makensis = $cands[0] }
-                }
-              } else { Diag "winget=missing" }
-              # 2) choco
-              if (-not $makensis -and (Get-Command choco -ErrorAction SilentlyContinue)) {
-                $chocoOut = & choco install nsis -y --no-progress 2>&1
-                $chocoOut | ForEach-Object { Log $_ }
-                Diag "choco_exit=$LASTEXITCODE"
-                if ($LASTEXITCODE -eq 0 -and (Test-Path "C:\ProgramData\chocolatey\tools\nsis\makensis.exe")) {
-                  $makensis = "C:\ProgramData\chocolatey\tools\nsis\makensis.exe"
                 }
               }
               # 3) direct download (URLs discovered at run time)
