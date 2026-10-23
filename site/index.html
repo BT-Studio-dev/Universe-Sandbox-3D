@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Universe Sandbox 3D — N-body universe in your pocket (and on Windows 7)</title>
-<meta name="description" content="Universe Sandbox 3D: a dependency-free C++/OpenGL N-body gravity sandbox for Windows 7, 10 and 11. Spawn stars and planets, reverse time, save your universe.">
+<meta name="description" content="Universe Sandbox 3D: a dependency-free C#/OpenGL N-body gravity sandbox for Windows 7, 10 and 11. Spawn stars and planets, reverse time, save your universe.">
 <style>
   :root{
     --bg:#05070f; --bg2:#0a0f1e; --panel:#0d1426; --line:#1c2742;
@@ -187,7 +187,7 @@
     <h2>Under the hood</h2>
     <p class="sub">Zero external dependencies — the whole app, loader and installer are first-party.</p>
     <div class="grid">
-      <div class="card"><h3>C++11 · OpenGL 3.3</h3><p>Hand-rolled WGL context bootstrap (core &amp; compatibility profiles, with a full self-diagnostic dialog) and a self-contained GL 3.3 loader — no GLEW, no GLFW, no frameworks.</p></div>
+      <div class="card"><h3>C# · OpenGL 3.3</h3><p>Hand-rolled WGL context bootstrap (core &amp; compatibility profiles, with a full self-diagnostic dialog) and a self-contained GL 3.3 loader — no GLEW, no GLFW, no frameworks.</p></div>
       <div class="card"><h3>Physics</h3><p>Leapfrog KDK integrator at 512 substeps/s, softening ε = 10⁻⁴, reversible time, collision merge with momentum conservation.</p></div>
       <div class="card"><h3>CI · 4 green jobs</h3><p>Headless simulation tests (Linux) · Win32 layer compile-check · MSVC build + NSIS installer + PE/import-table Win7 audit · zig MinGW-w64 cross build with the same audit.</p></div>
     </div>
@@ -207,7 +207,7 @@
       <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions">CI runs</a>
       <a href="https://github.com/BT-Studio-dev/Universe-Sandbox-3D/actions/runs/39992395519/artifacts">Latest artifacts</a>
     </div>
-    <div class="foot-note">MIT licensed · C++11 / OpenGL 3.3 / raw Win32 · the hero animation is a live 9-body N-simulation rendered on canvas, same physics as the app (G = 4π², leapfrog).</div>
+    <div class="foot-note">MIT licensed · C# / OpenGL 3.3 / raw Win32 · the hero animation is a live 9-body N-simulation rendered on canvas, same physics as the app (G = 4π², leapfrog).</div>
   </div>
 </footer>
 
