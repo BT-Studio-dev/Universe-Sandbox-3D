@@ -230,6 +230,26 @@ jobs:
             Write-Host "::error title=NSIS-diag::unhandled=$_ | $($diag -join ' | ')"
             exit 1
           }
+      - name: Verify PE headers (Windows 7 / 10 / 11 compatibility proof)
+        shell: pwsh
+        run: |
+          function Get-PeInfo([string]$Path) {
+            $b = [System.IO.File]::ReadAllBytes($Path)
+            $pe = [BitConverter]::ToInt32($b, 0x3C)
+            $machine = [BitConverter]::ToUInt16($b, $pe+4)
+            $magic = [BitConverter]::ToUInt16($b, $pe+24)
+            $pe32plus = ($magic -eq 0x20B)
+            $osv = '{0}.{1}' -f $b[$pe+64], $b[$pe+65]
+            $sv = '{0}.{1}' -f $b[$pe+72], $b[$pe+73]
+            $subsysOff = if ($pe32plus) { $pe+92 } else { $pe+88 }
+            $subsys = [BitConverter]::ToUInt16($b, $subsysOff)
+            $line = '{0}: machine=0x{1:x4} PE32+={2} minOS={3} subsystemVersion={4} subsystem={5}' -f (Split-Path $Path -Leaf), $machine, $pe32plus, $osv, $sv, $subsys
+            Write-Host $line
+            Add-Content -Path "nsis-diag.log" -Value $line -ErrorAction SilentlyContinue
+          }
+          Get-PeInfo "build\us3d.exe"
+          Get-PeInfo "tools\installer\UniverseSandbox3D-Setup-1.0.0-win64.exe"
+          Write-Host "PE-VERIFY: minOS/subsystemVersion <= 6.1 means the Windows 7 loader will accept the image (Win10=10.0, Win8=6.2)"
       - name: Upload NSIS diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -244,6 +264,11 @@ jobs:
           path: |
             tools/installer/UniverseSandbox3D-Setup-1.0.0-win64.exe
             build/us3d.exe
+      - name: Upload MSVC-built exe (standalone)
+        uses: actions/upload-artifact@v4
+        with:
+          name: UniverseSandbox3D-exe-msvc-win64
+          path: build/us3d.exe
 
   # ------------------------------------------------------------------
   # Real Windows build with a MinGW-w64 cross compiler.
@@ -319,6 +344,26 @@ jobs:
         run: |
           file build/us3d.exe || true
           test -f build/us3d.exe
+          # PE header proof: x64 GUI exe with a minimum OS the Win7
+          # loader (6.1) will accept.
+          dump_pe() {
+            f=$1
+            pe=$(od -An -t u4 -j 60 -N 4 "$f" | tr -d ' ')
+            u16() { # $1 = offset; file from $f
+              lo=$(od -An -t u1 -j "$1" -N 1 "$f" | tr -d ' ')
+              hi=$(od -An -t u1 -j $(( $1 + 1 )) -N 1 "$f" | tr -d ' ')
+              echo $(( lo + hi * 256 ))
+            }
+            machine=$(u16 $((pe+4)))
+            magic=$(u16 $((pe+24)))
+            osmaj=$(od -An -t u1 -j $((pe+64)) -N 1 "$f" | tr -d ' ')
+            osmin=$(od -An -t u1 -j $((pe+65)) -N 1 "$f" | tr -d ' ')
+            svmaj=$(od -An -t u1 -j $((pe+72)) -N 1 "$f" | tr -d ' ')
+            svmin=$(od -An -t u1 -j $((pe+73)) -N 1 "$f" | tr -d ' ')
+            if [ "$magic" -eq 523 ]; then plus=yes; else plus=no; fi
+            printf '%s: machine=%s PE32+=%s minOS=%s.%s subsystemVersion=%s.%s\n' "$f" "$machine" "$plus" "$osmaj" "$osmin" "$svmaj" "$svmin"
+          }
+          dump_pe build/us3d.exe
       - name: Upload cross-built exe
         uses: actions/upload-artifact@v4
         with:

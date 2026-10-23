@@ -31,7 +31,11 @@ if(MSVC)
     # to start the exe.
     set(CMAKE_SYSTEM_VERSION 6.1)
     add_compile_definitions(_WIN32_WINNT=0x0601 WINVER=0x0601 NOMINMAX)
-    add_compile_options(/W3 /utf-8)
+    add_compile_options(/W3 /utf-8 /MT)
+    # /MT = static C runtime (matches vs/UniverseSandbox.vcxproj).
+    # A dynamic CRT would need the VC++ redistributable installed on
+    # the target machine - legacy Win7 boxes often lack it and the
+    # exe fails to start with "VCRUNTIME140.dll is missing".
 else()
     add_compile_options(-Wall -Wextra)
 endif()
