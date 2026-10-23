@@ -15,6 +15,7 @@
 #endif
 
 #include <functional>
+#include <string>
 
 namespace us3d {
 
@@ -46,6 +47,12 @@ public:
 
     const char* error() const { return errorBuf_; }
 
+    // Multi-line diagnostics captured during create(): GL version /
+    // vendor / renderer and the outcome of every 3.3-context attempt.
+    // Shown in the "incompatible GPU driver" dialog so failures on
+    // software renderers (Mesa/llvmpipe) or VMs are self-explaining.
+    const std::string& glReport() const { return glReport_; }
+
     // Callbacks driven by the message loop.
     std::function<void(int w, int h)>        onResize;
     std::function<void()>                     onClose;
@@ -75,6 +82,7 @@ private:
     HWND hwnd_ = nullptr;
     HDC  hdc_  = nullptr;
     void* glctx_ = nullptr;   // HGLRC
+    std::string glReport_;
     int  width_ = 0, height_ = 0;
     int  lastMouseX_ = 0, lastMouseY_ = 0;
     bool fullscreen_ = false;

@@ -93,6 +93,7 @@ US3D_GL_DECL(glGetIntegerv, PFNGLGETINTEGERVPROC)
 US3D_GL_DECL(glGetError, PFNGLGETERRORPROC)
 US3D_GL_DECL(wglCreateContext, PFNWGLCREATECONTEXTPROC)
 US3D_GL_DECL(wglCreateContextAttribsARB, PFNWGLCREATECONTEXTATTRIBSARBPROC)
+US3D_GL_DECL(wglCreateContextAttribs, PFNWGLCREATECONTEXTATTRIBPROC)
 US3D_GL_DECL(wglMakeCurrent, PFNWGLMAKECURRENTPROC)
 US3D_GL_DECL(wglGetCurrentContext, PFNWGLGETCURRENTCONTEXTPROC)
 US3D_GL_DECL(wglDeleteContext, PFNWGLDELETECONTEXTPROC)
@@ -221,6 +222,7 @@ bool load() {
         { "glGetError",             reinterpret_cast<void**>(&glGetError) },
         { "wglCreateContext",       reinterpret_cast<void**>(&wglCreateContext) },
         { "wglCreateContextAttribsARB", reinterpret_cast<void**>(&wglCreateContextAttribsARB) },
+        { "wglCreateContextAttribs", reinterpret_cast<void**>(&wglCreateContextAttribs) },
         { "wglMakeCurrent",         reinterpret_cast<void**>(&wglMakeCurrent) },
         { "wglGetCurrentContext",   reinterpret_cast<void**>(&wglGetCurrentContext) },
         { "wglDeleteContext",       reinterpret_cast<void**>(&wglDeleteContext) },
@@ -233,6 +235,15 @@ std::string versionString() {
     if (!glGetString || !glGetString(GL_VERSION)) return "<no GL context>";
     return reinterpret_cast<const char*>(glGetString(GL_VERSION));
 }
+
+static std::string queryString(GLenum name) {
+    if (!glGetString) return "<no GL context>";
+    const char* s = reinterpret_cast<const char*>(glGetString(name));
+    return s ? s : "<null>";
+}
+
+std::string vendorString()   { return queryString(GL_VENDOR); }
+std::string rendererString() { return queryString(GL_RENDERER); }
 
 bool isCompatible() {
     // Parse the major/minor from "x.y.z vendor...".

@@ -25,6 +25,9 @@ SetCompressor /SOLID lzma
 Section "Install"
   SetOutPath "$INSTDIR"
   File "..\..\build\us3d.exe"
+  ; Software-rendering (Mesa/llvmpipe) fallback launcher for VMs /
+  ; driver-less PCs - see the file header for usage.
+  File "..\..\build\run_mesa.bat"
   WriteRegStr HKLM "Software\UniverseSandbox3D" "InstallDir" "$INSTDIR"
   CreateShortcut "$SMPROGRAMS\Universe Sandbox 3D.lnk" "$INSTDIR\us3d.exe"
   CreateShortcut "$DESKTOP\Universe Sandbox 3D.lnk" "$INSTDIR\us3d.exe"
@@ -32,6 +35,7 @@ SectionEnd
 
 Section "Uninstall"
   Delete "$INSTDIR\us3d.exe"
+  Delete "$INSTDIR\run_mesa.bat"
   Delete "$SMPROGRAMS\Universe Sandbox 3D.lnk"
   Delete "$DESKTOP\Universe Sandbox 3D.lnk"
   DeleteRegKey HKLM "Software\UniverseSandbox3D"

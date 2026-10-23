@@ -274,6 +274,10 @@ typedef GLenum  (*PFNGLGETERRORPROC)(void);
 // WGL (context and device handles are opaque void*)
 typedef void*   (*PFNWGLCREATECONTEXTPROC)(void* /*HDC*/);
 typedef void*   (*PFNWGLCREATECONTEXTATTRIBSARBPROC)(void*, void*, const int*);
+// Same signature; on Windows 8+ the ARB suffix was promoted to a core
+// entry point, so drivers (and the Mesa-for-Windows opengl32.dll drop-in)
+// may export either name.
+typedef void*   (*PFNWGLCREATECONTEXTATTRIBPROC)(void*, void*, const int*);
 typedef int     (*PFNWGLMAKECURRENTPROC)(void* /*HDC*/, void*);
 typedef void*   (*PFNWGLGETCURRENTCONTEXTPROC)(void);
 typedef int     (*PFNWGLDELETECONTEXTPROC)(void*);
@@ -371,6 +375,7 @@ extern PFNGLGETERRORPROC              glGetError;
 
 extern PFNWGLCREATECONTEXTPROC        wglCreateContext;
 extern PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
+extern PFNWGLCREATECONTEXTATTRIBPROC  wglCreateContextAttribs;
 extern PFNWGLMAKECURRENTPROC          wglMakeCurrent;
 extern PFNWGLGETCURRENTCONTEXTPROC    wglGetCurrentContext;
 extern PFNWGLDELETECONTEXTPROC        wglDeleteContext;
@@ -389,6 +394,8 @@ bool load();
 
 // Human readable GL version / renderer string ("3.3.0 NVIDIA ...").
 std::string versionString();
+std::string vendorString();     // glGetString(GL_VENDOR)
+std::string rendererString();   // glGetString(GL_RENDERER)
 
 // True if the running context is core-profile 3.3 or newer.
 bool isCompatible();

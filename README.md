@@ -198,11 +198,35 @@ fields) are still loaded.
 
 ## Troubleshooting
 
-- **“incompatible GPU driver” dialog** — your graphics driver reports OpenGL
-  below 3.3. Update the driver (common on old Windows 7 machines with
-  very old GPU drivers).
-- **Black screen on Windows 7 with integrated graphics** — same fix: update
-  the GPU driver; OpenGL 3.3 is the minimum.
+- **“OpenGL 3.3 not available” dialog** — your graphics driver reports OpenGL
+  below 3.3 (common on old Windows 7 machines with very old GPU drivers, on
+  VMs, or on driver-less hardware). The dialog now prints a *Context
+  bootstrap* report showing exactly which 3.3-context attempt succeeded or
+  failed, plus the GL version / vendor / renderer — include it when
+  reporting the issue.
+
+  Two ways forward:
+
+  1. **Update the graphics driver** (real GPU, physical PC).
+  2. **Software rendering with Mesa/llvmpipe** (VMs, headless boxes, old
+     integrated GPUs). This is fully supported:
+     - Get the *Mesa for Windows* x64 build
+       (<https://www.mesa3d.org/download.html>) and place `opengl32.dll`
+       and `libgallium_wgl.dll` in the **same folder as `us3d.exe`**.
+     - Start the app with the included **`run_mesa.bat`** (it forces Mesa to
+       advertise an OpenGL 3.3 Core / GLSL 330 context). You can also do it
+       by hand in a terminal:
+       ```bat
+       set MESA_GL_VERSION_OVERRIDE=3.3FC
+       set MESA_GLSL_VERSION_OVERRIDE=330
+       us3d.exe
+       ```
+     Expect software-rendered frame rates (tens of FPS for a modest
+     particle count, not hundreds).
+
+- **Black screen on Windows 7 with integrated graphics** — same as above:
+  update the GPU driver, or use the Mesa/llvmpipe fallback; OpenGL 3.3 is
+  the minimum.
 - **Jittery at 32× speed** — that is 512 physics substeps per frame; it is
   intentional to keep orbits stable at high speed.
 - **Where are saves?** Next to the executable (`universe_save.txt`).

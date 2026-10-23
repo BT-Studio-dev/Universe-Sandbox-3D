@@ -101,6 +101,11 @@ jobs:
             $out | Select-Object -Last 10 | ForEach-Object { Write-Host "::error title=MSVC-build-tail::$_" }
             exit 1
           }
+      - name: Stage software-rendering fallback launcher
+        shell: pwsh
+        run: |
+          Copy-Item tools\run_mesa.bat build\run_mesa.bat
+          Get-Item build\run_mesa.bat | Format-List Name,Length
       - name: Verify exe
         shell: pwsh
         run: |
@@ -277,11 +282,14 @@ jobs:
           path: |
             tools/installer/UniverseSandbox3D-Setup-1.0.0-win64.exe
             build/us3d.exe
+            build/run_mesa.bat
       - name: Upload MSVC-built exe (standalone)
         uses: actions/upload-artifact@v4
         with:
           name: UniverseSandbox3D-exe-msvc-win64
-          path: build/us3d.exe
+          path: |
+            build/us3d.exe
+            build/run_mesa.bat
 
   # ------------------------------------------------------------------
   # Real Windows build with a MinGW-w64 cross compiler.
@@ -377,8 +385,12 @@ jobs:
             printf '%s: machine=%s PE32+=%s minOS=%s.%s subsystemVersion=%s.%s\n' "$f" "$machine" "$plus" "$osmaj" "$osmin" "$svmaj" "$svmin"
           }
           dump_pe build/us3d.exe
+          # Ship the Mesa/llvmpipe fallback launcher next to the exe.
+          cp tools/run_mesa.bat build/run_mesa.bat
       - name: Upload cross-built exe
         uses: actions/upload-artifact@v4
         with:
           name: UniverseSandbox3D-exe-cross-win64
-          path: build/us3d.exe
+          path: |
+            build/us3d.exe
+            build/run_mesa.bat

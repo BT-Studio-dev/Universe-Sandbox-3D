@@ -67,10 +67,17 @@ bool App::init(HINSTANCE hInstance) {
     if (!gl33::isCompatible()) {
         const std::string msg =
             "This computer's graphics driver reports an OpenGL version below 3.3.\n\n"
-            "Detected: " + gl33::versionString() + "\n\n"
-            "Universe Sandbox 3D needs a 3D card with an OpenGL 3.3-capable driver.\n"
-            "Update the graphics driver and try again.";
-        MessageBoxA(nullptr, msg.c_str(), "Universe Sandbox 3D - incompatible GPU driver",
+            + window_.glReport() + "\n"
+            "Universe Sandbox 3D needs OpenGL 3.3 (core or compatibility profile).\n"
+            "Options:\n"
+            " - On a physical PC: update the graphics driver and try again.\n"
+            " - On a VM or a PC without a working 3D driver: put the\n"
+            "   Mesa-for-Windows DLLs (opengl32.dll + libgallium_wgl.dll) next\n"
+            "   to us3d.exe and start the app with the included run_mesa.bat.\n"
+            " - The 'Context bootstrap' lines above show which 3.3-context\n"
+            "   attempt succeeded or failed - useful when reporting the issue.";
+        MessageBoxA(nullptr, msg.c_str(),
+                    "Universe Sandbox 3D - OpenGL 3.3 not available",
                     MB_OK | MB_ICONERROR);
         return false;
     }

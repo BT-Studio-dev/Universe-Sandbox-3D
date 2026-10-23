@@ -195,56 +195,94 @@ bool Window::create(HINSTANCE hInstance, const char* title, int width, int heigh
         return false;
     }
 
-    // ---- GL 3.3 core context ----
+    // ---- GL 3.3 context (MSDN bootstrap) ----
     // Resolve the always-available opengl32 entry points first. (Some GL
     // functions need a current context to resolve; they are re-resolved
     // after the context exists below.)
     gl33::load();
 
+    std::string report;
+
     // Step 1: a temporary legacy context. Several drivers (notably Intel,
     // and some AMD/NVIDIA on Windows 7) only expose
     // wglCreateContextAttribsARB through wglGetProcAddress once *some*
     // context is current - the MSDN-recommended creation flow.
-    void* ctx = nullptr;   // GL context handle (WGL HGLRC-compatible)
+    void* legacyCtx = nullptr;
     if (gl33::wglCreateContext) {
-        ctx = gl33::wglCreateContext(hdc_);
+        legacyCtx = gl33::wglCreateContext(hdc_);
     }
-    if (!ctx) {
+    if (!legacyCtx) {
         setError(this, "wglCreateContext failed (error %lu)",
                  (unsigned)GetLastError());
         return false;
     }
-    if (!gl33::wglMakeCurrent(hdc_, ctx)) {
+    if (!gl33::wglMakeCurrent(hdc_, legacyCtx)) {
         setError(this, "wglMakeCurrent failed (error %lu)", (unsigned)GetLastError());
-        gl33::wglDeleteContext(ctx);
+        gl33::wglDeleteContext(legacyCtx);
         return false;
     }
+    const std::string legacyVersion = gl33::versionString();
+    report += "Context bootstrap:\n";
+    report += "  1. legacy context: created, reports '" + legacyVersion + "'\n";
 
-    // Step 2: with a context current, a 3.3-capable driver now exposes
-    // wglCreateContextAttribsARB.
-    if (!gl33::wglCreateContextAttribsARB) gl33::load();
+    // Step 2: a modern 3.3 context. Try several entry-point names and
+    // profiles in order: real GPU drivers almost always expose
+    // wglCreateContextAttribsARB with a core profile, but the
+    // Mesa-for-Windows (llvmpipe) drop-in and some older drivers expose
+    // only the Windows 8+ core name, or only a compatibility profile.
+    // This app uses nothing core-only, so a 3.3 compatibility context is
+    // equally acceptable.
+    if (!gl33::wglCreateContextAttribsARB || !gl33::wglCreateContextAttribs) gl33::load();
 
-    void* newCtx = nullptr;
-    if (gl33::wglCreateContextAttribsARB) {
+    void* ctx = legacyCtx;
+    struct Attempt {
+        PFNWGLCREATECONTEXTATTRIBPROC fn;
+        const char* label;
+        int         profile;
+    };
+    const Attempt attempts[] = {
+        { gl33::wglCreateContextAttribsARB, "wglCreateContextAttribsARB / 3.3 core",  WGL_CONTEXT_CORE_PROFILE_BIT_ARB },
+        { gl33::wglCreateContextAttribsARB, "wglCreateContextAttribsARB / 3.3 compat", WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB },
+        { gl33::wglCreateContextAttribs,    "wglCreateContextAttribs / 3.3 core",     WGL_CONTEXT_CORE_PROFILE_BIT_ARB },
+        { gl33::wglCreateContextAttribs,    "wglCreateContextAttribs / 3.3 compat",   WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB },
+    };
+    bool modernOk = false;
+    for (size_t i = 0; i < sizeof(attempts) / sizeof(attempts[0]) && !modernOk; ++i) {
+        const std::string step = "  2." + std::to_string(i + 1) + " ";
+        if (!attempts[i].fn) {
+            report += step + attempts[i].label + ": entry point not resolved\n";
+            continue;
+        }
         const int attribs[] = {
             WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
             WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-            WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+            WGL_CONTEXT_PROFILE_MASK_ARB,  attempts[i].profile,
             0,
         };
-        newCtx = gl33::wglCreateContextAttribsARB(hdc_, nullptr, attribs);
-    }
-    if (newCtx) {
-        gl33::wglDeleteContext(ctx);
-        ctx = newCtx;
-        if (!gl33::wglMakeCurrent(hdc_, ctx)) {
-            setError(this, "wglMakeCurrent failed (error %lu)", (unsigned)GetLastError());
-            gl33::wglDeleteContext(ctx);
-            return false;
+        void* newCtx = attempts[i].fn(hdc_, nullptr, attribs);
+        if (newCtx) {
+            if (gl33::wglMakeCurrent(hdc_, newCtx)) {
+                gl33::wglDeleteContext(legacyCtx);
+                ctx = newCtx;
+                modernOk = true;
+                report += step + attempts[i].label + ": OK\n";
+            } else {
+                report += step + attempts[i].label + ": created, wglMakeCurrent failed (error "
+                        + std::to_string(GetLastError()) + ")\n";
+                gl33::wglDeleteContext(newCtx);
+            }
+        } else {
+            report += step + attempts[i].label + ": failed (wgl error "
+                    + std::to_string(GetLastError()) + ")\n";
         }
     }
-    // else: keep the legacy context; the version check below reports the
-    // driver's actual capabilities and the app shows a clear error.
+    if (!modernOk) {
+        report += "  -> keeping legacy context (reported version: " + legacyVersion + ")\n";
+    }
+    report += "GL_VERSION : " + gl33::versionString() + "\n";
+    report += "GL_VENDOR  : " + gl33::vendorString() + "\n";
+    report += "GL_RENDERER: " + gl33::rendererString() + "\n";
+    glReport_ = report;
 
     glctx_ = ctx;
 
