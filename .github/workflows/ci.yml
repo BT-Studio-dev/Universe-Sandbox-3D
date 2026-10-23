@@ -36,8 +36,8 @@ jobs:
 
   # ------------------------------------------------------------------
   # Real Windows build with MSVC (any recent Visual Studio with the
-  # C++ x64 toolset: 2019 / 2022 / 2026 - located via vswhere, driven
-  # by the Ninja generator, so no specific VS generator is required)
+  # C++ x64 toolset - located via vswhere, driven by the Ninja
+  # generator, so no specific VS generator is required)
   # ------------------------------------------------------------------
   windows-msvc:
     name: Build x64 (MSVC, Windows)
@@ -78,24 +78,33 @@ jobs:
           Write-Host "Using Visual Studio at: $path"
           "vsPath=$path" | Add-Content $env:GITHUB_OUTPUT
       - name: Configure
-        shell: cmd
+        shell: pwsh
         env:
           VSPATH: ${{ steps.vs.outputs.vsPath }}
         run: |
-          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat"
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release || (
-            echo === configure failed; versions: &
-            cmake --version &
-            cl 2>nul &
-            exit /b 1
-          )
+          $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release 2>&1"
+          $out | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY "### MSVC configure failed - last 60 lines"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            ($out | Select-Object -Last 60) | ForEach-Object { Add-Content -Path $env:GITHUB_STEP_SUMMARY $_ }
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            exit 1
+          }
       - name: Build (Release)
-        shell: cmd
+        shell: pwsh
         env:
           VSPATH: ${{ steps.vs.outputs.vsPath }}
         run: |
-          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat"
-          cmake --build build --parallel
+          $out = & cmd /c "`"%VSPATH%\VC\Auxiliary\Build\vcvars64.bat`" && cmake --build build --parallel 2>&1"
+          $out | ForEach-Object { Write-Host $_ }
+          if ($LASTEXITCODE -ne 0) {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY "### MSVC build failed - last 80 lines"
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            ($out | Select-Object -Last 80) | ForEach-Object { Add-Content -Path $env:GITHUB_STEP_SUMMARY $_ }
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY '```'
+            exit 1
+          }
       - name: Verify exe
         shell: pwsh
         run: |
@@ -127,7 +136,17 @@ jobs:
             -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
             -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
       - name: Build
-        run: cmake --build build --parallel
+        run: |
+          set -o pipefail
+          if ! cmake --build build --parallel 2>&1 | tee build.log; then
+            {
+              echo "### MinGW build failed - last 80 lines"
+              echo '```'
+              tail -n 80 build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
       - name: Verify exe
         run: |
           file build/us3d.exe || true
