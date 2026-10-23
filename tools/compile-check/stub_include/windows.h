@@ -62,8 +62,7 @@ typedef const char*     LPCSTR;
 
 #define LOWORD(l)  ((WORD)(((DWORD)(l)) & 0xFFFF))
 #define HIWORD(l)  ((WORD)(((DWORD)(l) >> 16) & 0xFFFF))
-#define GET_X_LPARAM(lp)       ((int)(short)(((LPARAM)(lp)) & 0xFFFF))
-#define GET_Y_LPARAM(lp)       ((int)(short)(((LPARAM)(lp) >> 16) & 0xFFFF))
+// GET_X_LPARAM / GET_Y_LPARAM live in <windowsx.h> (see stub there).
 #define GET_WHEEL_DELTA_WPARAM(wp) ((short)HIWORD(wp))
 
 // ---- structs ---------------------------------------------------------------

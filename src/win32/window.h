@@ -11,6 +11,7 @@
 #    define WIN32_LEAN_AND_MEAN
 #  endif
 #  include <windows.h>
+#  include <windowsx.h>   // GET_X_LPARAM / GET_Y_LPARAM
 #endif
 
 #include <functional>

@@ -143,9 +143,9 @@ src/
     body.h               celestial body
     system.h/.cpp        N-body integrator, collisions, trails
     presets.h/.cpp       solar system, binary, asteroid belt, random
-    savestate.h/.cpp     text save/load (US3D v1)
+    savestate.h/.cpp     text save/load (US3D v2, reads v1)
     catalog.h            Add-panel catalog + display/physics formatting
-    shaders.h            all GLSL 3.30 shaders
+    shaders.h/.cpp       GLSL 3.30 shaders (declarations / sources)
   ui/
     gui.h/.cpp           immediate-mode GUI (panels, buttons, sliders, discs)
     panels.h/.cpp        the UI panels (Add/Tools/Find/Sim/View/Info/time bar)

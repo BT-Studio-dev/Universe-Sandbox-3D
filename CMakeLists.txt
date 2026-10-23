@@ -58,6 +58,7 @@ if(WIN32)
     add_executable(us3d WIN32
         src/main.cpp
         src/app.cpp
+        src/core/shaders.cpp
         src/win32/window.cpp
         src/gl/gl33.cpp
         src/render/renderer.cpp

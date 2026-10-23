@@ -55,6 +55,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\app.cpp" />
+    <ClCompile Include="..\src\core\shaders.cpp" />
     <ClCompile Include="..\src\win32\window.cpp" />
     <ClCompile Include="..\src\gl\gl33.cpp" />
     <ClCompile Include="..\src\render\renderer.cpp" />
