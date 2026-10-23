@@ -122,18 +122,42 @@ jobs:
                 Write-Host "::error title=NSIS-env::curl.exe not found"
                 exit 1
               }
-              # 1) Chocolatey, if the image still ships it
-              if (Get-Command choco -ErrorAction SilentlyContinue) {
+              # 1) winget (first-party on the runner; catalog on Microsoft infra)
+              if (Get-Command winget -ErrorAction SilentlyContinue) {
+                Write-Host "winget search NSIS"
+                $wout = & winget search NSIS --accept-source-agreements 2>&1
+                $wout | ForEach-Object { Write-Host $_ }
+                $wout | ForEach-Object { Write-Host "::notice title=NSIS-winget-search::$_" }
+                $ids = $wout | Where-Object { $_ -match '^[A-Za-z0-9][A-Za-z0-9.]*\s+\S.*NSIS' -and $_ -notmatch '^\s*Id\s' } | ForEach-Object { ($_ -split '\s+')[0] }
+                $pref = $ids | Where-Object { $_ -match 'NSIS$' -and $_ -notmatch 'Portable|Installer' } | Select-Object -First 1
+                if ($pref) { $ids = @($pref) }
+                if ($ids) {
+                  Write-Host "winget install $($ids -join ', ')"
+                  $winst = & winget install --id ($ids -join ',') -e --silent --accept-source-agreements --accept-package-agreements 2>&1
+                  $winst | ForEach-Object { Write-Host $_ }
+                  $winst | Select-Object -Last 5 | ForEach-Object { Write-Host "::notice title=NSIS-winget-install::$_" }
+                  foreach ($dir in @("$env:LOCALAPPDATA\Microsoft\WinGet\Links",
+                                     "C:\Program Files (x86)\NSIS",
+                                     "C:\Program Files\NSIS")) {
+                    if (Test-Path "$dir\makensis.exe") { $makensis = "$dir\makensis.exe"; break }
+                  }
+                  if (-not $makensis) {
+                    $found = Get-ChildItem -Path "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter makensis.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+                    if ($found) { $makensis = $found.FullName }
+                  }
+                }
+              } else { Write-Host "::notice title=NSIS-winget::winget not available" }
+              # 2) Chocolatey, if the image still ships it
+              if (-not $makensis -and (Get-Command choco -ErrorAction SilentlyContinue)) {
                 Write-Host "Trying 'choco install nsis'"
                 $chocoOut = & choco install nsis -y --no-progress 2>&1
-                $chocoOut | ForEach-Object { Write-Host $_ }
+                $chocoOut | Select-Object -Last 5 | ForEach-Object { Write-Host "::notice title=NSIS-choco::$_" }
                 $cand = "C:\ProgramData\chocolatey\tools\nsis\makensis.exe"
                 if ($LASTEXITCODE -eq 0 -and (Test-Path $cand)) { $makensis = $cand }
               }
-              # 2) Discover the current official download URL dynamically
+              # 3) Discover the current official download URL dynamically
               if (-not $makensis) {
                 $urls = @()
-                # 2a) choco nuspec always carries the up-to-date SourceForge URL
                 try {
                   curl.exe -fsSL --retry 2 -o nsis.nuspec "https://community.chocolatey.org/api/v2/package/nsis"
                   [xml]$nuspec = Get-Content nsis.nuspec -Raw
@@ -141,34 +165,29 @@ jobs:
                   $src  = $nuspec.package.packageSourceUrl
                   if ($src -and $ver) {
                     $urls += ($src -replace '\{0\}', $ver)
-                    Write-Host "choco nuspec (v$ver): $src"
+                    Write-Host "::notice title=NSIS-nuspec::v$ver -> $src"
                   }
-                } catch { Write-Host "choco nuspec lookup failed: $_" }
-                # 2b) scrape the SourceForge file list for /download links
+                } catch { Write-Host "::notice title=NSIS-nuspec::lookup failed: $_" }
                 try {
                   curl.exe -fsSL --retry 2 -o nsis_files.html "https://sourceforge.net/projects/nsis/files/NSIS%20Zip/"
                   $links = [regex]::Matches((Get-Content nsis_files.html -Raw), '/projects/nsis/files/NSIS%20Zip/([\d.]+)/([^"/]+\.zip)/download')
                   $urls += ($links | ForEach-Object { 'https://sourceforge.net' + $_.Value } | Sort-Object -Unique)
-                  Write-Host ("SourceForge listing: {0} candidate(s)" -f $links.Count)
-                } catch { Write-Host "SourceForge listing failed: $_" }
-                $ok = $false
+                  Write-Host "::notice title=NSIS-sf::SourceForge listing gave $($links.Count) candidate(s)"
+                } catch { Write-Host "::notice title=NSIS-sf::listing failed: $_" }
                 foreach ($u in $urls) {
                   Write-Host "Trying $u"
                   curl.exe -fsSL --retry 2 -o nsis.zip $u
                   if ($LASTEXITCODE -eq 0) {
                     Write-Host ("Downloaded nsis.zip: {0} bytes" -f (Get-Item nsis.zip).Length)
-                    $ok = $true
+                    Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
+                    $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
+                    if ($found) { $makensis = $found.FullName }
                     break
                   }
-                  Write-Host "  (curl exit $LASTEXITCODE, trying next)"
+                  Write-Host "::notice title=NSIS-url::curl exit $LASTEXITCODE for $u"
                 }
-                if (-not $ok) { Write-Host "::error title=NSIS-download::no NSIS download URL worked (candidates in log above)"; exit 1 }
-                Expand-Archive -Path nsis.zip -DestinationPath nsispkg -Force
-                $found = Get-ChildItem -Path nsispkg -Recurse -Filter makensis.exe | Select-Object -First 1
-                if (-not $found) { Write-Host "::error title=NSIS-download::makensis.exe not found in extracted archive"; exit 1 }
-                $makensis = $found.FullName
               }
-              if (-not $makensis) { Write-Host "::error title=NSIS-missing::no working NSIS install method on this image"; exit 1 }
+              if (-not $makensis) { Write-Host "::error title=NSIS-missing::no NSIS source worked; see NSIS-* annotations"; exit 1 }
             }
             Write-Host "Using makensis: $makensis"
             $out = & $makensis -V2 tools\installer\setup.nsi 2>&1
