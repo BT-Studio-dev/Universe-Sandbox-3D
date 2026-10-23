@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1A6B2F4C-8E9D-4F1B-B5A3-7C9D2E4F6A80}</ProjectGuid>
+    <RootNamespace>UniverseSandbox3D</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <UseDebugLibraries Condition="'$(Configuration)'=='Debug'">true</UseDebugLibraries>
+    <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)obj\$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>us3d</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization Condition="'$(Configuration)'=='Debug'">Disabled</Optimization>
+      <Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
+      <FunctionLevelLinking Condition="'$(Configuration)'=='Release'">true</FunctionLevelLinking>
+      <IntrinsicFunctions Condition="'$(Configuration)'=='Release'">true</IntrinsicFunctions>
+      <PreprocessorDefinitions>NOMINMAX;_WIN32_WINNT=0x0601;WINVER=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>wWinMainCRTStartup</EntryPointSymbol>
+      <AdditionalDependencies>user32.lib;gdi32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\app.cpp" />
+    <ClCompile Include="..\src\win32\window.cpp" />
+    <ClCompile Include="..\src\gl\gl33.cpp" />
+    <ClCompile Include="..\src\render\renderer.cpp" />
+    <ClCompile Include="..\src\render\camera.cpp" />
+    <ClCompile Include="..\src\render\hud.cpp" />
+    <ClCompile Include="..\src\core\system.cpp" />
+    <ClCompile Include="..\src\core\presets.cpp" />
+    <ClCompile Include="..\src\core\savestate.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\app.h" />
+    <ClInclude Include="..\src\core\body.h" />
+    <ClInclude Include="..\src\core\math.h" />
+    <ClInclude Include="..\src\core\presets.h" />
+    <ClInclude Include="..\src\core\savestate.h" />
+    <ClInclude Include="..\src\core\shaders.h" />
+    <ClInclude Include="..\src\core\system.h" />
+    <ClInclude Include="..\src\gl\gl33.h" />
+    <ClInclude Include="..\src\render\camera.h" />
+    <ClInclude Include="..\src\render\hud.h" />
+    <ClInclude Include="..\src\render\renderer.h" />
+    <ClInclude Include="..\src\ui\font5x7.h" />
+    <ClInclude Include="..\src\win32\window.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

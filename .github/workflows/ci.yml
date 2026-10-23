@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  # ------------------------------------------------------------------
+  # Headless physics tests (N-body integrator, collisions, save/load)
+  # ------------------------------------------------------------------
+  sim-tests:
+    name: Simulation tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build test_sim
+        run: |
+          g++ -std=c++11 -Wall -Wextra -O2 -Isrc \
+            tests/test_sim.cpp \
+            src/core/system.cpp src/core/presets.cpp src/core/savestate.cpp \
+            -o test_sim
+      - name: Run test_sim
+        run: ./test_sim
+
+  # ------------------------------------------------------------------
+  # Compile-check the Windows-only layer against stub Win32 headers
+  # ------------------------------------------------------------------
+  win32-stub-check:
+    name: Windows layer compile-check (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile-check Win32 code
+        run: sh tools/compile-check/check.sh
+
+  # ------------------------------------------------------------------
+  # Real Windows build with MSVC (Visual Studio 2022, x64)
+  # ------------------------------------------------------------------
+  windows-msvc:
+    name: Build x64 (MSVC, Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+      - name: Build (Release)
+        run: cmake --build build --config Release --parallel
+      - name: Verify exe
+        run: |
+          if (-not (Test-Path build\Release\us3d.exe)) { throw "us3d.exe not found" }
+          Get-Item build\Release\us3d.exe | Format-List Name,Length
+
+  # ------------------------------------------------------------------
+  # Real Windows build with MinGW-w64 cross compiler
+  # ------------------------------------------------------------------
+  windows-mingw:
+    name: Build x64 (MinGW-w64 cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MinGW-w64
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-mingw-w64-x86-64
+      - name: Configure
+        run: |
+          cmake -B build \
+            -G "MinGW Makefiles" \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Verify exe
+        run: |
+          file build/us3d.exe || true
+          test -f build/us3d.exe
